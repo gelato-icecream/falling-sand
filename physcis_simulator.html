@@ -291,7 +291,7 @@
     </div>
 
     <div class="header" id="main-header">
-        <h1 onclick="toggleCheatConsole(true)" style="cursor: pointer; user-select: none;" title="Click for Secrets">Falling <span>Sand</span></h1>
+        <h1>Falling <span>Sand</span></h1>
         <p>Drag the mouse over the screen, and watch the magic happen. <br>
             <small style="color: #64748b;">Shortcuts: 1-8 (Materials), 9/0 (Portals), - (Eraser), P (Pause), C (Clear),
                 Shift+C (Clear Active), F (Fullscreen), H (Hide UI), I (Invert Gravity), R (Reset)</small>
@@ -351,7 +351,8 @@
                 <button id="btn-uranium"
                     style="color: #4ade80; border-color: rgba(74, 222, 128, 0.4); text-shadow: 0 0 8px rgba(74, 222, 128, 0.6);">Nuclear
                     Uranium</button>
-                <button id="btn-steam" style="color: #e2e8f0; border-color: rgba(226, 232, 240, 0.4); text-shadow: 0 0 8px rgba(226, 232, 240, 0.5);">Steam</button>
+                <button id="btn-steam"
+                    style="color: #e2e8f0; border-color: rgba(226, 232, 240, 0.4); text-shadow: 0 0 8px rgba(226, 232, 240, 0.5);">Steam</button>
                 <button id="btn-erase" style="color: #f43f5e; border-color: rgba(244, 63, 94, 0.4);">Eraser</button>
                 <div class="divider"></div>
                 <div class="brush-controls">
@@ -1040,7 +1041,7 @@
         let cheatBuffer = "";
         let isAntimatterUnlocked = false;
         let isRainbowMode = false;
-        
+
         // Create hidden cheat console
         const cheatBox = document.createElement('input');
         cheatBox.type = 'text';
@@ -1065,6 +1066,58 @@
         cheatBox.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
         cheatBox.style.boxShadow = '0 0 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(234, 179, 8, 0.4)';
         document.body.appendChild(cheatBox);
+
+        // Create Help Menu Overlay
+        const helpOverlay = document.createElement('div');
+        helpOverlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+            z-index: 2000000; display: none; overflow-y: auto; padding: 40px 20px;
+            color: #fff; font-family: 'Segoe UI', sans-serif;
+        `;
+        helpOverlay.innerHTML = `
+            <div style="max-width: 800px; margin: 0 auto; background: #1e293b; border: 2px solid #eab308; border-radius: 20px; padding: 30px; box-shadow: 0 0 50px rgba(0,0,0,0.5);">
+                <h1 style="color: #eab308; text-align: center; margin-bottom: 30px; font-size: 2rem;">📚 SIMULATOR COMMANDS 📚</h1>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+                    <div>
+                        <h2 style="border-bottom: 2px solid #334155; padding-bottom: 10px;">⌨️ Keyboard Shortcuts</h2>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #eab308;">1 - 8</td><td style="padding: 8px;">Materials (Sand to Obsidian)</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #eab308;">9 / 0</td><td style="padding: 8px;">Portals (Blue / Orange)</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #eab308;">W, L, G, E, N</td><td style="padding: 8px;">Wood, Lightning, Glass, Ice, Nitrogen</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #eab308;">K, M, S, X</td><td style="padding: 8px;">Gunpowder, Melted Sand, Shards, Fire</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #eab308;">U, Q, V</td><td style="padding: 8px;">Uranium, Methane, Steam</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #eab308;">- / P</td><td style="padding: 8px;">Eraser / Pause Time</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #eab308;">C / Shift+C</td><td style="padding: 8px;">Clear Screen / Clear Active Tool</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #eab308;">I / R / F</td><td style="padding: 8px;">Invert Gravity / Reset / Fullscreen</td></tr>
+                            <tr><td style="padding: 8px; font-weight: bold; color: #eab308;">H</td><td style="padding: 8px;">Hide Interface</td></tr>
+                        </table>
+                    </div>
+                    <div>
+                        <h2 style="border-bottom: 2px solid #334155; padding-bottom: 10px;">🤫 Secret Cheat Codes</h2>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">godmode</td><td style="padding: 8px;">Toggle Massive God Brush</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">void</td><td style="padding: 8px;">Unlock Secret Antimatter</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">rainbow</td><td style="padding: 8px;">Toggle Party Rainbow Effect</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">kaboom</td><td style="padding: 8px;">Lightning Strike Swarm</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">supernova</td><td style="padding: 8px;">Giant Central Firestorm</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">iceage</td><td style="padding: 8px;">Freeze all Water to Ice</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">flood</td><td style="padding: 8px;">Spawns a Deluge of Water</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">quicksand</td><td style="padding: 8px;">Turns all Stone to Sand</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">volcano</td><td style="padding: 8px;">Erupts Lava from Bottom</td></tr>
+                            <tr><td style="padding: 8px; font-weight: bold; color: #10b981;">help</td><td style="padding: 8px;">Show this Cheat List</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <p style="text-align: center; margin-top: 30px; color: #94a3b8; font-style: italic;">Press ESC or click anywhere to exit the menu</p>
+                <div style="text-align: center; padding: 10px; color: #eab308; font-weight: bold; cursor: help;" title="Shortcut info">Tip: Use Shift+C to clear only the material you are holding!</div>
+                <button onclick="document.getElementById('help-overlay').style.display='none'" style="display: block; margin: 20px auto 0; padding: 10px 30px; background: #eab308; color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">CLOSE</button>
+            </div>
+        `;
+        helpOverlay.id = 'help-overlay';
+        helpOverlay.onclick = (e) => { if (e.target === helpOverlay) helpOverlay.style.display = 'none'; };
+        document.body.appendChild(helpOverlay);
 
         function showCheatMessage(text) {
             const msg = document.createElement('div');
@@ -1091,12 +1144,69 @@
         function processCheat(code) {
             code = code.trim().toLowerCase();
             if (code === 'godmode' || code === 'god') {
-                brushSizeDom.value = 50;
-                showCheatMessage("⚡ GOD MODE: MASSIVE BRUSH ⚡");
-            } else if (code === 'antigrav' || code === 'gravity') {
-                isInvertedGravity = !isInvertedGravity;
-                btnInvertAll.classList.toggle('active', isInvertedGravity);
-                showCheatMessage("🌍 GRAVITY INVERTED 🌍");
+                if (brushSizeDom.max == 100) {
+                    brushSizeDom.max = 15;
+                    brushSizeDom.value = 4;
+                    showCheatMessage("👼 MORTAL MODE: NORMAL BRUSH 👼");
+                } else {
+                    brushSizeDom.max = 100;
+                    brushSizeDom.value = 50;
+                    showCheatMessage("⚡ GOD MODE: MASSIVE BRUSH ⚡");
+                }
+            } else if (code === 'flood') {
+                for (let c = 0; c < width; c++) {
+                    for (let r = 0; r < 20; r++) {
+                        grid[c][r] = Math.floor(Math.random() * 4) + 6; // Water
+                    }
+                }
+                showCheatMessage("🌊 TSUNAMI FLOOD! 🌊");
+            } else if (code === 'quicksand') {
+                for (let c = 0; c < width; c++) {
+                    for (let r = 0; r < height; r++) {
+                        let v = grid[c][r];
+                        if (v === 14 || (v >= 11 && v <= 13)) grid[c][r] = Math.floor(Math.random() * 4) + 1; // Stone -> Sand
+                    }
+                }
+                showCheatMessage("⏳ THE GROUND IS TURNING TO SAND ⏳");
+            } else if (code === 'volcano') {
+                showCheatMessage("🌋 VOLCANIC ERUPTION! 🌋");
+                const cx = Math.floor(width / 2);
+                let frames = 200; // ~4-5 seconds of eruption
+                const volcanoInterval = setInterval(() => {
+                    if (frames-- <= 0) {
+                        clearInterval(volcanoInterval);
+                        return;
+                    }
+                    
+                    // 1. Manually PUSH existing lava UP to simulate velocity
+                    const pushRadius = 25;
+                    for (let x = cx - pushRadius; x <= cx + pushRadius; x++) {
+                        if (x < 0 || x >= width) continue;
+                        for (let y = 5; y < height; y++) {
+                            let val = grid[x][y];
+                            // If it's Lava or Fire, move it up!
+                            if ((val >= 118 && val <= 121) || (val >= 178 && val <= 181)) {
+                                if (grid[x][y-5] === 0 || Math.random() < 0.2) {
+                                    grid[x][y-5] = val;
+                                    grid[x][y] = 0;
+                                }
+                            }
+                        }
+                    }
+
+                    // 2. SPAWN new lava at the bottom source
+                    for (let i = -10; i <= 10; i++) {
+                        let tx = cx + i;
+                        let ty = height - 5;
+                        if (tx >= 0 && tx < width && ty >= 0 && ty < height) {
+                            if (Math.random() < 0.7) {
+                                grid[tx][ty] = Math.floor(Math.random() * 4) + 118; // Lava
+                            } else {
+                                grid[tx][ty] = Math.floor(Math.random() * 4) + 178; // Fire
+                            }
+                        }
+                    }
+                }, 30);
             } else if (code === 'void' || code === 'antimatter') {
                 isAntimatterUnlocked = true;
                 currentMaterialTool = 300;
@@ -1108,7 +1218,7 @@
                 for (let i = 0; i < 150; i++) {
                     let rx = Math.floor(Math.random() * width);
                     let ry = Math.floor(Math.random() * height);
-                    grid[rx][ry] = 150; 
+                    grid[rx][ry] = 150;
                 }
                 showCheatMessage("💥 KABOOM! 💥");
             } else if (code === 'freeze') {
@@ -1119,6 +1229,32 @@
             } else if (code === 'clear') {
                 for (let c = 0; c < width; c++) grid[c].fill(0);
                 showCheatMessage("✨ SCREEN PURIFIED ✨");
+            } else if (code === 'supernova' || code === 'nova') {
+                const cx = Math.floor(width / 2);
+                const cy = Math.floor(height / 2);
+                const radius = 60;
+                for (let i = -radius; i <= radius; i++) {
+                    for (let j = -radius; j <= radius; j++) {
+                        if (i*i + j*j <= radius*radius && Math.random() < 0.7) {
+                            let tx = cx + i; let ty = cy + j;
+                            if (tx >= 0 && tx < width && ty >= 0 && ty < height) {
+                                grid[tx][ty] = 178 + Math.floor(Math.random() * 4); // User fire
+                            }
+                        }
+                    }
+                }
+                showCheatMessage("🌟 SUPERNOVA ACTIVATED 🌟");
+            } else if (code === 'iceage' || code === 'freezeall') {
+                for (let c = 0; c < width; c++) {
+                    for (let r = 0; r < height; r++) {
+                        let v = grid[c][r];
+                        if (v >= 6 && v <= 9) grid[c][r] = 162 + Math.floor(Math.random() * 3); // Water -> Ice
+                    }
+                }
+                showCheatMessage("❄️ AN ICE AGE HAS BEGUN ❄️");
+            } else if (code === 'help' || code === 'list') {
+                helpOverlay.style.display = 'block';
+                showCheatMessage("📚 OPENING COMMAND ENCYCLOPEDIA 📚");
             } else if (code !== "") {
                 showCheatMessage("❌ INVALID CODE ❌");
             }
@@ -1159,27 +1295,27 @@
             }
         }
 
-        // Invisible trigger in bottom-right corner for mouse users
-        const secretTrigger = document.createElement('div');
-        secretTrigger.style.cssText = 'position:fixed; bottom:0; right:0; width:10px; height:10px; z-index:9999999; cursor:pointer; background:transparent;';
-        secretTrigger.title = "Secret Access";
-        secretTrigger.onclick = () => toggleCheatConsole(true);
-        document.documentElement.appendChild(secretTrigger);
 
         // GLOBAL CAPTURE LISTENER (By-passes most event blocks)
         window.addEventListener('keydown', (e) => {
             const isConsoleOpen = cheatBox.style.display === 'block';
 
-            // Toggle with Enter, Slash, or Tilde (Backquote)
-            if (e.key === 'Enter' || e.key === '/' || e.key === '`' || e.key === 'Backquote') {
-                if (isConsoleOpen) {
-                    if (e.key === 'Enter') {
-                        processCheat(cheatBox.value);
-                        toggleCheatConsole(false);
-                    }
-                } else {
+            // COMPLEX COMBO TO OPEN: Ctrl + Shift + \ OR Ctrl + Alt + Enter
+            const isActivator = (e.ctrlKey && e.shiftKey && (e.key === '\\' || e.key === '|' || e.code === 'Backslash')) 
+                             || (e.ctrlKey && e.altKey && e.key === 'Enter');
+
+            if (isActivator) {
+                if (!isConsoleOpen) {
                     toggleCheatConsole(true);
+                    e.preventDefault();
                 }
+                return;
+            }
+
+            // Only allow ENTER to submit once it's already open
+            if (isConsoleOpen && e.key === 'Enter') {
+                processCheat(cheatBox.value);
+                toggleCheatConsole(false);
                 e.preventDefault();
                 return;
             }
@@ -1241,16 +1377,16 @@
             if (s === 0) { r = g = b = l; } else {
                 const hue2rgb = (p, q, t) => {
                     if (t < 0) t += 1; if (t > 1) t -= 1;
-                    if (t < 1/6) return p + (q - p) * 6 * t;
-                    if (t < 1/2) return q;
-                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    if (t < 1 / 6) return p + (q - p) * 6 * t;
+                    if (t < 1 / 2) return q;
+                    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
                     return p;
                 };
                 const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
                 const p = 2 * l - q;
-                r = hue2rgb(p, q, h + 1/3);
+                r = hue2rgb(p, q, h + 1 / 3);
                 g = hue2rgb(p, q, h);
-                b = hue2rgb(p, q, h - 1/3);
+                b = hue2rgb(p, q, h - 1 / 3);
             }
             return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
         }
@@ -1314,7 +1450,7 @@
                         let val = grid[c][r];
 
                         // Faster 4-way diffusion
-                        let sum = heatGrid[idx]; 
+                        let sum = heatGrid[idx];
                         let count = 1.0;
 
                         if (c > 0) { sum += heatGrid[(c - 1) * height + r]; count++; }
@@ -1640,7 +1776,7 @@
                             }
                         }
                         // Floating movement
-                        let bY = rowScan - 1; 
+                        let bY = rowScan - 1;
                         if (Math.random() < 0.8) {
                             if (bY >= 0 && bY < height && grid[c][bY] === 0) {
                                 grid[c][bY] = activeBlockEntityState;
@@ -3046,7 +3182,7 @@
                                 if (nx >= 0 && nx < width && ny >= 0 && ny < height && grid[nx][ny] === 0) {
                                     grid[nx][ny] = activeBlockEntityState;
                                     grid[c][rowScan] = 0;
-                                    return; 
+                                    return;
                                 }
                             }
                         }
@@ -3086,9 +3222,9 @@
                         }
                     } else if (activeBlockEntityState >= 256 && activeBlockEntityState <= 259) { // Steam physics
                         // Steam condenses into water over time (rain effect)
-                        if (Math.random() < 0.0025) { 
+                        if (Math.random() < 0.0025) {
                             grid[c][rowScan] = Math.floor(Math.random() * 4) + 6; // Condense to water
-                            return; 
+                            return;
                         }
 
                         let bY = rowScan + dir; // rises
