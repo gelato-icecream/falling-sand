@@ -1,0 +1,3171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Falling Sand Simulator</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent: #eab308;
+            /* Yellow accent */
+            --accent-hover: #ca8a04;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            animation: fadeIn 1s ease-out;
+            max-height: 600px;
+            opacity: 1;
+            flex-shrink: 0;
+            overflow: hidden;
+            width: 95vw;
+        }
+
+        .header.hidden {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+            margin-bottom: 0;
+            pointer-events: none;
+        }
+
+        .header.fullscreen-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            margin: 0;
+            width: max-content;
+            max-width: 95vw;
+            pointer-events: none;
+        }
+
+        .header.fullscreen-overlay h1,
+        .header.fullscreen-overlay p {
+            display: none;
+        }
+
+        .header.fullscreen-overlay .tools {
+            pointer-events: auto;
+        }
+
+        h1 {
+            margin: 0 0 5px 0;
+            font-weight: 800;
+            font-size: 2.8rem;
+            letter-spacing: -1px;
+            color: var(--text-color);
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        h1 span {
+            color: var(--accent);
+        }
+
+        p {
+            margin: 0 0 15px 0;
+            color: #94a3b8;
+            font-size: 1.05rem;
+            font-weight: 500;
+        }
+
+        .tools {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .tools-row {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            background: rgba(30, 41, 59, 0.6);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .group-label {
+            font-size: 0.70rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-right: 8px;
+        }
+
+        button {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            padding: 3px 6px;
+            font-size: 0.70rem;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        button:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        button.active {
+            background-color: var(--accent) !important;
+            border-color: var(--accent) !important;
+            color: #000 !important;
+            box-shadow: 0 0 15px rgba(234, 179, 8, 0.3) !important;
+        }
+
+        .canvas-container {
+            position: relative;
+            padding: 12px;
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 0, 0, 0.2) inset;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            transition: transform 0.3s ease;
+            width: 95vw;
+            flex-grow: 1;
+            min-height: 0;
+            margin-bottom: 20px;
+            display: flex;
+            box-sizing: border-box;
+        }
+
+        .canvas-container.maximized {
+            width: 100vw;
+            margin-bottom: 0;
+            border-radius: 0;
+            padding: 0;
+            border: none;
+        }
+
+        .canvas-container:hover {
+            transform: scale(1.01);
+        }
+
+        .canvas-container.maximized:hover {
+            transform: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-color: #111;
+            /* This gives the exact crisp pixel/invisible grid feel */
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+            cursor: crosshair;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) inset;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .brush-controls {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 3px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .brush-controls label {
+            font-size: 0.70rem;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        input[type="range"] {
+            accent-color: var(--accent);
+            cursor: pointer;
+            width: 55px;
+            height: 10px;
+        }
+
+        .divider {
+            width: 1px;
+            height: 24px;
+            background-color: rgba(255, 255, 255, 0.2);
+            margin: 0 4px;
+        }
+
+        .top-right-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .icon-btn {
+            background-color: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="top-right-controls">
+        <button id="btn-toggle-ui" class="icon-btn" title="Toggle Controls UI">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 3H3v18h18V3z"></path>
+                <path d="M21 9H3"></path>
+                <path d="M9 21V9"></path>
+            </svg>
+        </button>
+        <button id="btn-fullscreen" class="icon-btn" title="Toggle Fullscreen">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
+                </path>
+            </svg>
+        </button>
+    </div>
+
+    <div class="header" id="main-header">
+        <h1>Falling <span>Sand</span></h1>
+        <p>Drag the mouse over the screen, and watch the magic happen. <br>
+            <small style="color: #64748b;">Shortcuts: 1-8 (Materials), 9/0 (Portals), - (Eraser), P (Pause), C (Clear),
+                Shift+C (Clear Active), F (Fullscreen), H (Hide UI), I (Invert Gravity), R (Reset)</small>
+        </p>
+        <div class="tools">
+            <div class="tools-row">
+                <span class="group-label">Materials</span>
+                <button id="btn-sand" class="active" style="color: #eab308; border-color: rgba(234, 179, 8, 0.4);">Sand
+                    Brush</button>
+                <button id="btn-stone" style="color: #a1a1aa; border-color: rgba(161, 161, 170, 0.4);">Stone
+                    Brush</button>
+                <button id="btn-steel" style="color: #cbd5e1; border-color: rgba(203, 213, 225, 0.4);">Steel
+                    Powder</button>
+                <button id="btn-metal" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.4);">Metal
+                    Line</button>
+                <button id="btn-water" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">Water
+                    Brush</button>
+                <button id="btn-acid" style="color: #4ade80; border-color: rgba(74, 222, 128, 0.4);">Acid Drop</button>
+                <button id="btn-acid-powder" style="color: #a3e635; border-color: rgba(163, 230, 53, 0.4);">Acid
+                    Powder</button>
+                <button id="btn-lava" style="color: #f97316; border-color: rgba(249, 115, 22, 0.4);">Lava Brush</button>
+                <button id="btn-molten-metal"
+                    style="color: #ff8214; border-color: rgba(255, 130, 20, 0.4); text-shadow: 0 0 6px rgba(255, 100, 10, 0.5);">Molten
+                    Metal</button>
+                <button id="btn-melted-sand"
+                    style="color: #ffb432; border-color: rgba(255, 180, 50, 0.4); text-shadow: 0 0 6px rgba(255, 180, 50, 0.5);">Melted
+                    Sand</button>
+                <button id="btn-thermite"
+                    style="color: #c47a1e; border-color: rgba(196, 122, 30, 0.4);">Thermite</button>
+                <button id="btn-obsidian"
+                    style="color: #a855f7; border-color: rgba(168, 85, 247, 0.4);">Obsidian</button>
+                <button id="btn-wood" style="color: #a16207; border-color: rgba(161, 98, 7, 0.4);">Wood</button>
+                <button id="btn-gunpowder"
+                    style="color: #64748b; border-color: rgba(100, 116, 139, 0.4); text-shadow: 0 0 6px rgba(100, 116, 139, 0.5);">Gunpowder</button>
+                <button id="btn-lightning"
+                    style="color: #fde047; border-color: rgba(253, 224, 71, 0.4); text-shadow: 0 0 5px rgba(253, 224, 71, 0.6);">⚡
+                    Lightning</button>
+                <button id="btn-glass" style="color: #a5f3fc; border-color: rgba(165, 243, 252, 0.4);">Solid
+                    Glass</button>
+                <button id="btn-glass-shards" style="color: #cbd5e1; border-color: rgba(203, 213, 225, 0.4);">Glass
+                    Shards</button>
+                <button id="btn-ice" style="color: #67e8f9; border-color: rgba(103, 232, 249, 0.4);">Ice</button>
+                <button id="btn-nitrogen"
+                    style="color: #e0e7ff; border-color: rgba(224, 231, 255, 0.4);">Nitrogen</button>
+                <button id="btn-fire" style="color: #f97316; border-color: rgba(249, 115, 22, 0.4);">Fire</button>
+                <button id="btn-portal-blue" style="color: #3b82f6; border-color: rgba(59, 130, 246, 0.4);">Portal
+                    In</button>
+                <button id="btn-portal-orange" style="color: #f97316; border-color: rgba(249, 115, 22, 0.4);">Portal
+                    Out</button>
+                <div class="brush-controls" style="margin-right: 15px;">
+                    <label for="portal-channel">Link #</label>
+                    <input type="number" id="portal-channel" min="1" max="9" value="1"
+                        style="width: 40px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0,0,0,0.2); color: white; text-align: center;">
+                </div>
+                <button id="btn-methane" style="color: #bef264; border-color: rgba(190, 242, 100, 0.4);">Methane
+                    Gas</button>
+                <button id="btn-uranium"
+                    style="color: #4ade80; border-color: rgba(74, 222, 128, 0.4); text-shadow: 0 0 8px rgba(74, 222, 128, 0.6);">Nuclear
+                    Uranium</button>
+                <button id="btn-steam" style="color: #e2e8f0; border-color: rgba(226, 232, 240, 0.4); text-shadow: 0 0 8px rgba(226, 232, 240, 0.5);">Steam</button>
+                <button id="btn-erase" style="color: #f43f5e; border-color: rgba(244, 63, 94, 0.4);">Eraser</button>
+                <div class="divider"></div>
+                <div class="brush-controls">
+                    <label for="brush-size">Size</label>
+                    <input type="range" id="brush-size" min="1" max="15" value="4">
+                </div>
+            </div>
+
+            <div class="tools-row">
+                <span class="group-label">Gravity</span>
+                <button id="btn-invert-all">Invert All</button>
+                <div class="divider"></div>
+                <button id="btn-invert-sand" style="color: #eab308; border-color: rgba(234, 179, 8, 0.4);">Invert
+                    Sand</button>
+                <button id="btn-invert-stone" style="color: #a1a1aa; border-color: rgba(161, 161, 170, 0.4);">Invert
+                    Stone</button>
+                <button id="btn-invert-steel" style="color: #cbd5e1; border-color: rgba(203, 213, 225, 0.4);">Invert
+                    Steel</button>
+                <button id="btn-invert-water" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">Invert
+                    Water</button>
+                <button id="btn-invert-acid" style="color: #4ade80; border-color: rgba(74, 222, 128, 0.4);">Invert
+                    Acid</button>
+                <button id="btn-invert-acid-powder"
+                    style="color: #a3e635; border-color: rgba(163, 230, 53, 0.4);">Invert Acid Powder</button>
+                <button id="btn-invert-lava" style="color: #f97316; border-color: rgba(249, 115, 22, 0.4);">Invert
+                    Lava</button>
+                <button id="btn-invert-molten-metal"
+                    style="color: #ff8214; border-color: rgba(255, 130, 20, 0.4);">Invert Molten Metal</button>
+                <button id="btn-invert-obsidian" style="color: #a855f7; border-color: rgba(168, 85, 247, 0.4);">Invert
+                    Obsidian</button>
+                <button id="btn-invert-wood" style="color: #a16207; border-color: rgba(161, 98, 7, 0.4);">Invert
+                    Wood</button>
+                <button id="btn-invert-lightning" style="color: #fde047; border-color: rgba(253, 224, 71, 0.4);">Invert
+                    Lightning</button>
+                <button id="btn-invert-glass" style="color: #a5f3fc; border-color: rgba(165, 243, 252, 0.4);">Invert
+                    Glass</button>
+                <button id="btn-invert-ice" style="color: #67e8f9; border-color: rgba(103, 232, 249, 0.4);">Invert
+                    Ice</button>
+                <button id="btn-invert-nitrogen" style="color: #e0e7ff; border-color: rgba(224, 231, 255, 0.4);">Invert
+                    Nitrogen</button>
+                <button id="btn-invert-fire" style="color: #f87171; border-color: rgba(248, 113, 113, 0.4);">Invert
+                    Fire</button>
+                <button id="btn-invert-uranium" style="color: #4ade80; border-color: rgba(74, 222, 128, 0.4);">Invert
+                    Uranium</button>
+                <button id="btn-invert-methane" style="color: #bef264; border-color: rgba(190, 242, 100, 0.4);">Invert
+                    Methane</button>
+                <button id="btn-invert-steam" style="color: #e2e8f0; border-color: rgba(226, 232, 240, 0.4);">Invert
+                    Steam</button>
+                <div class="divider"></div>
+                <div class="brush-controls">
+                    <label for="gravity-intensity">Gravity Force</label>
+                    <input type="range" id="gravity-intensity" min="0" max="2" step="0.1" value="1">
+                </div>
+            </div>
+
+            <div class="tools-row">
+                <span class="group-label">Simulation</span>
+                <button id="btn-clear">Clear Display</button>
+                <button id="btn-clear-active">Clear Active</button>
+                <button id="btn-pause">Pause Time</button>
+                <div class="divider"></div>
+                <button id="btn-reset"
+                    style="background-color: rgba(220, 38, 38, 0.2); border-color: rgba(220, 38, 38, 0.4);">Reset
+                    Defaults</button>
+                <div class="divider"></div>
+                <div class="brush-controls">
+                    <label for="sim-speed">Time Delay</label>
+                    <input type="range" id="sim-speed" min="0" max="100" value="3">
+                </div>
+                <div class="divider"></div>
+                <div class="brush-controls" style="gap: 4px;">
+                    <span style="font-size:0.70rem; font-weight:600;">🌡</span>
+                    <label for="fire-temp" id="fire-temp-label"
+                        style="font-size:0.70rem; font-weight:600; min-width:60px;">Normal</label>
+                    <input type="range" id="fire-temp" min="0" max="100" value="40"
+                        style="background: linear-gradient(to right, #8b0000, #cc3300, #ff6600, #ffcc00, #ffffff, #aaccff, #4488ff); width:70px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="simCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: false });
+
+        // The exact physics grid dimensions.
+        // Dividing it into chunks acts as an implicit invisible snap grid limit!
+        const invisibleGridChunkSize = 5;
+        let width, height, grid, heatGrid, heatGridNext, imageData;
+        let displayWidth, displayHeight;
+
+        function updateCanvasDisplaySize() {
+            const rect = canvas.getBoundingClientRect();
+            displayWidth = Math.floor(rect.width / invisibleGridChunkSize);
+            displayHeight = Math.floor(rect.height / invisibleGridChunkSize);
+
+            // Ensure grid is at least this large
+            if (!grid) {
+                width = displayWidth;
+                height = displayHeight;
+                grid = new Array(width).fill(0).map(() => new Array(height).fill(0));
+                heatGrid = new Float32Array(width * height);
+                heatGridNext = new Float32Array(width * height);
+            } else if (displayWidth > width || displayHeight > height) {
+                let newWidth = Math.max(width, displayWidth);
+                let newHeight = Math.max(height, displayHeight);
+                let newGrid = new Array(newWidth).fill(0).map(() => new Array(newHeight).fill(0));
+
+                for (let c = 0; c < width; c++) {
+                    for (let r = 1; r <= height; r++) {
+                        newGrid[c][newHeight - r] = grid[c][height - r];
+                    }
+                }
+                grid = newGrid;
+                width = newWidth;
+                height = newHeight;
+
+                // Re-initialize heat grids if size changes
+                heatGrid = new Float32Array(width * height);
+                heatGridNext = new Float32Array(width * height);
+            }
+
+            canvas.width = displayWidth;
+            canvas.height = displayHeight;
+
+            imageData = ctx.createImageData(displayWidth, displayHeight);
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                imageData.data[i + 3] = 255;
+            }
+        }
+
+        updateCanvasDisplaySize();
+
+        let resizeTimeout;
+        const resizeObserver = new ResizeObserver(() => {
+            clearTimeout(resizeTimeout);
+            // Re-calculate the actual pixel coordinates almost instantly
+            resizeTimeout = setTimeout(() => {
+                updateCanvasDisplaySize();
+            }, 10);
+        });
+        resizeObserver.observe(canvas.parentElement);
+
+        // Palette Array
+        // Used to map grid ID tags into actual raw RGB color arrays
+        const palette = [
+            [22, 28, 36],    // 0: Empty space backdrop (Dark Slate)
+            [250, 204, 21],  // 1: Yellow Sand Variation 1
+            [234, 179, 8],   // 2: Yellow Sand Variation 2
+            [202, 138, 4],   // 3: Yellow Sand Variation 3
+            [253, 224, 71],  // 4: Yellow Sand Variation 4 (Lighter highlight)
+            [148, 163, 184], // 5: Metal (Stays in place)
+            [56, 189, 248],  // 6: Light Blue Water
+            [14, 165, 233],  // 7: Medium Blue Water
+            [2, 132, 199],   // 8: Deep Blue Water
+            [3, 105, 161],   // 9: Dark Blue Water
+            [150, 116, 0],   // 10: Wet Sand Variation 1
+            [134, 99, 0],    // 11: Wet Sand Variation 2
+            [102, 78, 0],    // 12: Wet Sand Variation 3
+            [173, 134, 0],   // 13: Wet Sand Variation 4
+            [104, 107, 110], // 14: Stone
+            [165, 172, 185], // 15: Steel
+            [74, 222, 128],  // 16: Acid 1
+            [34, 197, 94],   // 17: Acid 2
+            [220, 38, 38],   // 18: Lava 1
+            [239, 68, 68],   // 19: Lava 2
+            [249, 115, 22],  // 20: Lava 3
+            [251, 146, 60],  // 21: Lava 4
+            [107, 33, 168],  // 22: Obsidian 1 (dark purple)
+            [126, 34, 206],  // 23: Obsidian 2
+            [147, 51, 234],  // 24: Obsidian 3
+            [88, 28, 135],   // 25: Obsidian 4 (deepest purple)
+            [163, 230, 53],  // 26: Acid Powder 1
+            [132, 204, 22],  // 27: Acid Powder 2
+            [101, 163, 13],  // 28: Acid Powder 3
+            [77, 124, 15],   // 29: Acid Powder 4
+            [200, 230, 255], // 30: Lightning 1
+            [255, 255, 255], // 31: Lightning Core
+            [253, 224, 71],  // 32: Lightning Yellow edge
+            [150, 230, 255], // 33: Glass 1
+            [210, 240, 255], // 34: Glass 2
+            [120, 210, 255], // 35: Glass 3
+            [165, 243, 252], // 36: Ice 1
+            [103, 232, 249], // 37: Ice 2
+            [34, 211, 238],  // 38: Ice 3
+            [238, 242, 255], // 39: Nitrogen 1
+            [224, 231, 255], // 40: Nitrogen 2
+            [199, 210, 254], // 41: Nitrogen 3
+            [239, 68, 68],   // 42: Fire 1 (Red)
+            [249, 115, 22],  // 43: Fire 2 (Orange)
+            [250, 204, 21],  // 44: Fire 3 (Yellow)
+            [254, 240, 138], // 45: Fire 4 (Light Yellow)
+            [133, 77, 14],   // 46: Wood 1
+            [161, 98, 7],    // 47: Wood 2
+            [113, 63, 18],   // 48: Wood 3
+            [180, 80, 10],   // 49: Burning Wood 1 (dark orange ember)
+            [210, 60, 5],    // 50: Burning Wood 2 (deep red-orange)
+            [140, 50, 8],    // 51: Burning Wood 3 (charred dark red)
+            // Palette indices 52-55 are placeholders for UserFire (178-181 maps via -126 => 52-55; rendered dynamically via fireTempColors)
+            [249, 115, 22],  // 52: UserFire placeholder (not normally palette-rendered)
+            [249, 115, 22],  // 53: UserFire placeholder
+            [249, 115, 22],  // 54: UserFire placeholder
+            [249, 115, 22],  // 55: UserFire placeholder
+            // Molten Metal: palette indices 56-59 (grid IDs 182-185 mapped via -126)
+            [255, 130, 20],  // 56: Molten Metal 1 (bright orange-red)
+            [255, 100, 10],  // 57: Molten Metal 2 (deep orange)
+            [220, 80, 5],    // 58: Molten Metal 3 (dark red-orange)
+            [200, 60, 0],    // 59: Molten Metal 4 (dark red, cooling)
+            // Thermite (unlit): palette indices 60-62 (grid IDs 186-188 mapped via -126)
+            [180, 90, 20],   // 60: Thermite 1 (dark amber)
+            [160, 75, 15],   // 61: Thermite 2 (deeper amber)
+            [140, 60, 10],   // 62: Thermite 3 (dark brown-amber)
+            // Burning Thermite Tier 0 - Ember (189-192 => 63-66): Very dim red, nearly black
+            [90, 8, 2],      // 63
+            [75, 5, 0],      // 64
+            [105, 12, 3],    // 65
+            [60, 3, 0],      // 66
+            // Burning Thermite Tier 1 - Cool (193-196 => 67-70): Deep red
+            [180, 30, 8],    // 67
+            [160, 20, 5],    // 68
+            [200, 45, 12],   // 69
+            [140, 15, 3],    // 70
+            // Burning Thermite Tier 2 - Normal (197-200 => 71-74): Orange (like normal fire)
+            [249, 115, 22],  // 71
+            [239, 68, 68],   // 72
+            [255, 140, 40],  // 73
+            [229, 90, 15],   // 74
+            // Burning Thermite Tier 3 - Hot (201-204 => 75-78): Yellow-orange
+            [253, 224, 71],  // 75
+            [251, 191, 36],  // 76
+            [255, 235, 100], // 77
+            [245, 175, 25],  // 78
+            // Burning Thermite Tier 4 - Intense (205-208 => 79-82): Brilliant white-yellow
+            [255, 250, 220], // 79
+            [255, 240, 190], // 80
+            [255, 255, 240], // 81
+            [255, 245, 200], // 82
+            // Burning Thermite Tier 5 - Plasma (209-212 => 83-86): Electric blue-white
+            [147, 197, 253], // 83
+            [96, 165, 250],  // 84
+            [191, 219, 254], // 85
+            [59, 130, 246],   // 86
+            // Melted Sand: palette indices 87-90 (grid IDs 237-240 mapped via -150)
+            [255, 180, 50],  // 87: bright yellow-orange
+            [255, 160, 30],  // 88: deep orange
+            [255, 140, 20],  // 89: dark orange
+            [255, 120, 10],   // 90: very dark orange (cooling)
+            // Gunpowder: palette indices 91-94 (grid IDs 241-244 mapped via -150)
+            [64, 64, 64],    // 91
+            [80, 80, 80],    // 92
+            [48, 48, 48],    // 93
+            [72, 72, 72],    // 94
+            // Uranium: palette indices 95-98 (grid IDs 248-251 mapped via -153)
+            [34, 197, 94],   // 95: Deep Uranium Green
+            [74, 222, 128],  // 96: Bright Glow Green
+            [22, 163, 74],   // 97: Forest Green Uranium
+            [134, 239, 172], // 98: Pale highlight green
+            // Methane: palette indices 99-102 (grid IDs 252-255 mapped via -153)
+            [190, 242, 100, 70], // 99: Transparent
+            [163, 230, 53, 30],  // 100: Very transparent (simulated gap)
+            [217, 249, 157, 60], // 101: Transparent
+            [132, 204, 22, 20],   // 102: Extremely transparent (simulated gap)
+            // Steam: palette indices 103-106 (grid IDs 256-259 mapped via -153)
+            [230, 230, 240, 35], // 103: Light steam
+            [210, 210, 220, 55], // 104
+            [250, 250, 255, 25], // 105: Thin steam
+            [220, 220, 230, 45]  // 106
+        ];
+
+        const portalColors = [
+            [], // 0
+            [[59, 130, 246], [249, 115, 22]],  // 1: Blue / Orange
+            [[34, 197, 94], [236, 72, 153]],  // 2: Green / Pink
+            [[168, 85, 247], [234, 179, 8]],  // 3: Purple / Yellow
+            [[6, 182, 212], [239, 68, 68]],   // 4: Cyan / Red
+            [[255, 255, 255], [0, 0, 0]],     // 5: White / Black
+            [[20, 184, 166], [244, 63, 94]],  // 6: Teal / Rose
+            [[139, 92, 246], [132, 204, 22]], // 7: Violet / Lime
+            [[99, 102, 241], [245, 158, 11]], // 8: Indigo / Amber
+            [[100, 116, 139], [253, 224, 71]], // 9: Slate / Yellow
+        ];
+
+        for (let i = 1; i <= 9; i++) {
+            palette[130 + i] = portalColors[i][0]; // Portal In
+            palette[140 + i] = portalColors[i][1]; // Portal Out
+        }
+
+        // Environment Tracking Let Variables
+        let isActivelyHoldingDown = false;
+        let mouseX = -1;
+        let mouseY = -1;
+        let lastDrawnX = -1;
+        let lastDrawnY = -1;
+        let currentMaterialTool = 1; // 1 = Physics Sand, 0 = Erase Air Block, 2 = Metal, 3 = Water, 4 = Stone, 6 = Steel, 8 = Acid
+
+        // Element bindings
+        const mainHeader = document.getElementById('main-header');
+        const simCanvasContainer = document.querySelector('.canvas-container');
+        const btnToggleUi = document.getElementById('btn-toggle-ui');
+        const btnFullscreen = document.getElementById('btn-fullscreen');
+        const brushSizeDom = document.getElementById('brush-size');
+        const simSpeedDom = document.getElementById('sim-speed');
+        const gravityIntensityDom = document.getElementById('gravity-intensity');
+        const fireTempDom = document.getElementById('fire-temp');
+        const fireTempLabelDom = document.getElementById('fire-temp-label');
+        const btnSand = document.getElementById('btn-sand');
+        const btnStone = document.getElementById('btn-stone');
+        const btnSteel = document.getElementById('btn-steel');
+        const btnMetal = document.getElementById('btn-metal');
+        const btnWater = document.getElementById('btn-water');
+        const btnAcid = document.getElementById('btn-acid');
+        const btnAcidPowder = document.getElementById('btn-acid-powder');
+        const btnLava = document.getElementById('btn-lava');
+        const btnMoltenMetal = document.getElementById('btn-molten-metal');
+        const btnMeltedSand = document.getElementById('btn-melted-sand');
+        const btnThermite = document.getElementById('btn-thermite');
+        const btnObsidian = document.getElementById('btn-obsidian');
+        const btnWood = document.getElementById('btn-wood');
+        const btnGunpowder = document.getElementById('btn-gunpowder');
+        const btnLightning = document.getElementById('btn-lightning');
+        const btnGlass = document.getElementById('btn-glass');
+        const btnGlassShards = document.getElementById('btn-glass-shards');
+        const btnIce = document.getElementById('btn-ice');
+        const btnNitrogen = document.getElementById('btn-nitrogen');
+        const btnFire = document.getElementById('btn-fire');
+        const btnPortalBlue = document.getElementById('btn-portal-blue');
+        const btnPortalOrange = document.getElementById('btn-portal-orange');
+        const portalChannelDom = document.getElementById('portal-channel');
+        const btnMethane = document.getElementById('btn-methane');
+        const btnUranium = document.getElementById('btn-uranium');
+        const btnSteam = document.getElementById('btn-steam');
+        const btnErase = document.getElementById('btn-erase');
+        const btnClear = document.getElementById('btn-clear');
+        const btnClearActive = document.getElementById('btn-clear-active');
+        const btnPause = document.getElementById('btn-pause');
+        const btnInvertAll = document.getElementById('btn-invert-all');
+        const btnInvertSand = document.getElementById('btn-invert-sand');
+        const btnInvertStone = document.getElementById('btn-invert-stone');
+        const btnInvertSteel = document.getElementById('btn-invert-steel');
+        const btnInvertWater = document.getElementById('btn-invert-water');
+        const btnInvertAcid = document.getElementById('btn-invert-acid');
+        const btnInvertAcidPowder = document.getElementById('btn-invert-acid-powder');
+        const btnInvertLava = document.getElementById('btn-invert-lava');
+        const btnInvertMoltenMetal = document.getElementById('btn-invert-molten-metal');
+        const btnInvertObsidian = document.getElementById('btn-invert-obsidian');
+        const btnInvertWood = document.getElementById('btn-invert-wood');
+        const btnInvertLightning = document.getElementById('btn-invert-lightning');
+        const btnInvertGlass = document.getElementById('btn-invert-glass');
+        const btnInvertIce = document.getElementById('btn-invert-ice');
+        const btnInvertNitrogen = document.getElementById('btn-invert-nitrogen');
+        const btnInvertFire = document.getElementById('btn-invert-fire');
+        const btnInvertUranium = document.getElementById('btn-invert-uranium');
+        const btnInvertMethane = document.getElementById('btn-invert-methane');
+        const btnInvertSteam = document.getElementById('btn-invert-steam');
+        const btnReset = document.getElementById('btn-reset');
+
+        let isPaused = false;
+        let isInvertedGravity = false;
+
+        let isSandInverted = false;
+        let isStoneInverted = false;
+        let isSteelInverted = false;
+        let isWaterInverted = false;
+        let isAcidInverted = false;
+        let isAcidPowderInverted = false;
+        let isLavaInverted = false;
+        let isMoltenMetalInverted = false;
+        let isObsidianInverted = false;
+        let isWoodInverted = false;
+        let isLightningInverted = false;
+        let isGlassInverted = false;
+        let isIceInverted = false;
+        let isNitrogenInverted = false;
+        let isMeltedSandInverted = false;
+        let isFireInverted = false;  // Fire floats up by default; inverted = sinks
+        let isUraniumInverted = false;
+        let isMethaneInverted = false;
+        let isSteamInverted = false;
+
+        // Mouse coordinate math, translating high-res monitor pixels into snapped CA engine blocks
+        function recomputeMouseCoords(event) {
+            const rect = canvas.getBoundingClientRect();
+            // We get relative raw pixels from edge
+            const relativePixelX = event.clientX - rect.left;
+            const relativePixelY = event.clientY - rect.top;
+
+            // Re-scale accurately adjusting for aspect ratio + scale boundaries
+            const horizontalScaleMatrix = displayWidth / rect.width;
+            const verticalScaleMatrix = displayHeight / rect.height;
+
+            // Offset the display window into the physics grid cleanly
+            mouseX = Math.floor(relativePixelX * horizontalScaleMatrix);
+            // The canvas dynamically displays mapped entirely from gridY = height - displayHeight downwards
+            mouseY = Math.floor(relativePixelY * verticalScaleMatrix) + (height - displayHeight);
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) {
+                isActivelyHoldingDown = true;
+                recomputeMouseCoords(e);
+                lastDrawnX = mouseX;
+                lastDrawnY = mouseY;
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isActivelyHoldingDown = false;
+            lastDrawnX = -1;
+            lastDrawnY = -1;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            recomputeMouseCoords(e);
+        });
+
+        // If your cursor leaves the glass
+        canvas.addEventListener('mouseleave', () => {
+            mouseX = -1;
+            mouseY = -1;
+            isActivelyHoldingDown = false;
+            lastDrawnX = -1;
+            lastDrawnY = -1;
+        });
+
+        function setActiveButton(activeBtn) {
+            [btnSand, btnStone, btnSteel, btnMetal, btnWater, btnAcid, btnAcidPowder, btnLava, btnMoltenMetal, btnMeltedSand, btnThermite, btnObsidian, btnWood, btnGunpowder, btnLightning, btnGlass, btnGlassShards, btnIce, btnNitrogen, btnFire, btnMethane, btnUranium, btnPortalBlue, btnPortalOrange, btnSteam, btnErase].forEach(btn => btn.classList.remove('active'));
+            activeBtn.classList.add('active');
+        }
+
+        btnSand.addEventListener('click', () => { currentMaterialTool = 1; setActiveButton(btnSand); });
+        btnStone.addEventListener('click', () => { currentMaterialTool = 4; setActiveButton(btnStone); });
+        btnSteel.addEventListener('click', () => { currentMaterialTool = 6; setActiveButton(btnSteel); });
+        btnMetal.addEventListener('click', () => { currentMaterialTool = 2; setActiveButton(btnMetal); });
+        btnWater.addEventListener('click', () => { currentMaterialTool = 3; setActiveButton(btnWater); });
+        btnAcid.addEventListener('click', () => { currentMaterialTool = 8; setActiveButton(btnAcid); });
+        btnAcidPowder.addEventListener('click', () => { currentMaterialTool = 13; setActiveButton(btnAcidPowder); });
+        btnLava.addEventListener('click', () => { currentMaterialTool = 9; setActiveButton(btnLava); });
+        btnMoltenMetal.addEventListener('click', () => { currentMaterialTool = 20; setActiveButton(btnMoltenMetal); });
+        btnMeltedSand.addEventListener('click', () => { currentMaterialTool = 22; setActiveButton(btnMeltedSand); });
+        btnThermite.addEventListener('click', () => { currentMaterialTool = 21; setActiveButton(btnThermite); });
+        btnObsidian.addEventListener('click', () => { currentMaterialTool = 10; setActiveButton(btnObsidian); });
+        btnWood.addEventListener('click', () => { currentMaterialTool = 19; setActiveButton(btnWood); });
+        btnGunpowder.addEventListener('click', () => { currentMaterialTool = 24; setActiveButton(btnGunpowder); });
+        btnLightning.addEventListener('click', () => { currentMaterialTool = 14; setActiveButton(btnLightning); });
+        btnGlass.addEventListener('click', () => { currentMaterialTool = 15; setActiveButton(btnGlass); });
+        btnGlassShards.addEventListener('click', () => { currentMaterialTool = 23; setActiveButton(btnGlassShards); });
+        btnIce.addEventListener('click', () => { currentMaterialTool = 16; setActiveButton(btnIce); });
+        btnNitrogen.addEventListener('click', () => { currentMaterialTool = 17; setActiveButton(btnNitrogen); });
+        btnFire.addEventListener('click', () => { currentMaterialTool = 18; setActiveButton(btnFire); });
+        btnMethane.addEventListener('click', () => { currentMaterialTool = 26; setActiveButton(btnMethane); });
+        btnUranium.addEventListener('click', () => { currentMaterialTool = 25; setActiveButton(btnUranium); });
+        btnPortalBlue.addEventListener('click', () => { currentMaterialTool = 11; setActiveButton(btnPortalBlue); });
+        btnPortalOrange.addEventListener('click', () => { currentMaterialTool = 12; setActiveButton(btnPortalOrange); });
+        btnSteam.addEventListener('click', () => { currentMaterialTool = 27; setActiveButton(btnSteam); });
+        btnErase.addEventListener('click', () => { currentMaterialTool = 0; setActiveButton(btnErase); });
+
+        portalChannelDom.addEventListener('input', (e) => {
+            let ch = parseInt(e.target.value);
+            if (ch >= 1 && ch <= 9) {
+                let colorIn = portalColors[ch][0];
+                let colorOut = portalColors[ch][1];
+                btnPortalBlue.style.color = `rgb(${colorIn[0]}, ${colorIn[1]}, ${colorIn[2]})`;
+                btnPortalBlue.style.borderColor = `rgba(${colorIn[0]}, ${colorIn[1]}, ${colorIn[2]}, 0.4)`;
+                btnPortalOrange.style.color = `rgb(${colorOut[0]}, ${colorOut[1]}, ${colorOut[2]})`;
+                btnPortalOrange.style.borderColor = `rgba(${colorOut[0]}, ${colorOut[1]}, ${colorOut[2]}, 0.4)`;
+            }
+        });
+
+        btnClear.addEventListener('click', () => {
+            // Iterates down the horizontal memory matrix and clears out vertical vectors
+            for (let c = 0; c < width; c++) {
+                grid[c].fill(0);
+            }
+            if (heatGrid) heatGrid.fill(0);
+            if (heatGridNext) heatGridNext.fill(0);
+        });
+
+        btnClearActive.addEventListener('click', () => {
+            // Only erase particles that match the currently selected brush tool
+            for (let c = 0; c < width; c++) {
+                for (let r = 0; r < height; r++) {
+                    let val = grid[c][r];
+                    let needsRemoval = false;
+
+                    if (currentMaterialTool === 1) { // Normal Sand + Wet Sand
+                        if ((val >= 1 && val <= 4) || (val >= 10 && val <= 13)) needsRemoval = true;
+                    } else if (currentMaterialTool === 2) { // Metal
+                        if (val === 5) needsRemoval = true;
+                    } else if (currentMaterialTool === 3) { // Water
+                        if (val >= 6 && val <= 9) needsRemoval = true;
+                    } else if (currentMaterialTool === 4) { // Stone
+                        if (val === 14) needsRemoval = true;
+                    } else if (currentMaterialTool === 6) { // Steel
+                        if (val >= 15 && val <= 115) needsRemoval = true;
+                    } else if (currentMaterialTool === 8) { // Acid
+                        if (val >= 116 && val <= 117) needsRemoval = true;
+                    } else if (currentMaterialTool === 13) { // Acid Powder
+                        if (val >= 126 && val <= 129) needsRemoval = true;
+                    } else if (currentMaterialTool === 9) { // Lava
+                        if (val >= 118 && val <= 121) needsRemoval = true;
+                    } else if (currentMaterialTool === 10) { // Obsidian
+                        if (val === 122) needsRemoval = true;
+                    } else if (currentMaterialTool === 14) { // Lightning / Glass
+                        if (val >= 150 && val <= 161) needsRemoval = true;
+                    } else if (currentMaterialTool === 15) { // Glass brush
+                        if (val >= 153 && val <= 161) needsRemoval = true;
+                    } else if (currentMaterialTool === 16) { // Ice
+                        if (val >= 162 && val <= 164) needsRemoval = true;
+                    } else if (currentMaterialTool === 17) { // Nitrogen
+                        if (val >= 165 && val <= 167) needsRemoval = true;
+                    } else if (currentMaterialTool === 18) { // Fire - clear both wood fire and user fire
+                        if (val >= 168 && val <= 171) needsRemoval = true; // wood fire
+                        if (val >= 178 && val <= 181) needsRemoval = true; // user fire
+                    } else if (currentMaterialTool === 19) { // Wood
+                        if (val >= 172 && val <= 174) needsRemoval = true;
+                    } else if (currentMaterialTool === 20) { // Molten Metal
+                        if (val >= 182 && val <= 185) needsRemoval = true;
+                    } else if (currentMaterialTool === 21) { // Thermite (unlit + all burning tiers + fire particles)
+                        if (val >= 186 && val <= 236) needsRemoval = true;
+                    } else if (currentMaterialTool === 22) { // Melted Sand
+                        if (val >= 237 && val <= 240) needsRemoval = true;
+                    } else if (currentMaterialTool === 23) { // Glass Shards
+                        if (val >= 159 && val <= 161) needsRemoval = true;
+                    } else if (currentMaterialTool === 24) { // Gunpowder
+                        if (val >= 241 && val <= 244) needsRemoval = true;
+                    } else if (currentMaterialTool === 25) { // Uranium
+                        if (val >= 248 && val <= 251) needsRemoval = true;
+                    } else if (currentMaterialTool === 26) { // Methane
+                        if (val >= 252 && val <= 255) needsRemoval = true;
+                    } else if (currentMaterialTool === 27) { // Steam
+                        if (val >= 256 && val <= 259) needsRemoval = true;
+                    } else if (currentMaterialTool === 11) { // Portal Blue
+                        if (val >= 131 && val <= 139) needsRemoval = true;
+                    } else if (currentMaterialTool === 12) { // Portal Orange
+                        if (val >= 141 && val <= 149) needsRemoval = true;
+                    }
+
+                    if (needsRemoval) {
+                        grid[c][r] = 0;
+                    }
+                }
+            }
+        });
+
+        btnPause.addEventListener('click', () => {
+            isPaused = !isPaused;
+            if (isPaused) {
+                btnPause.classList.add('active');
+                btnPause.innerText = 'Resume Time';
+            } else {
+                btnPause.classList.remove('active');
+                btnPause.innerText = 'Pause Time';
+            }
+        });
+
+        function makeInvertToggle(btn, getFlag, setFlag) {
+            btn.addEventListener('click', () => {
+                setFlag(!getFlag());
+                btn.classList.toggle('active', getFlag());
+            });
+        }
+
+        btnInvertAll.addEventListener('click', () => {
+            isInvertedGravity = !isInvertedGravity;
+            btnInvertAll.classList.toggle('active', isInvertedGravity);
+        });
+
+        makeInvertToggle(btnInvertSand, () => isSandInverted, v => isSandInverted = v);
+        makeInvertToggle(btnInvertStone, () => isStoneInverted, v => isStoneInverted = v);
+        makeInvertToggle(btnInvertSteel, () => isSteelInverted, v => isSteelInverted = v);
+        makeInvertToggle(btnInvertWater, () => isWaterInverted, v => isWaterInverted = v);
+        makeInvertToggle(btnInvertAcid, () => isAcidInverted, v => isAcidInverted = v);
+        makeInvertToggle(btnInvertAcidPowder, () => isAcidPowderInverted, v => isAcidPowderInverted = v);
+        makeInvertToggle(btnInvertLava, () => isLavaInverted, v => isLavaInverted = v);
+        makeInvertToggle(btnInvertMoltenMetal, () => isMoltenMetalInverted, v => isMoltenMetalInverted = v);
+        makeInvertToggle(btnInvertObsidian, () => isObsidianInverted, v => isObsidianInverted = v);
+        makeInvertToggle(btnInvertWood, () => isWoodInverted, v => isWoodInverted = v);
+        makeInvertToggle(btnInvertLightning, () => isLightningInverted, v => isLightningInverted = v);
+        makeInvertToggle(btnInvertGlass, () => isGlassInverted, v => isGlassInverted = v);
+        makeInvertToggle(btnInvertIce, () => isIceInverted, v => isIceInverted = v);
+        makeInvertToggle(btnInvertNitrogen, () => isNitrogenInverted, v => isNitrogenInverted = v);
+        makeInvertToggle(btnInvertFire, () => isFireInverted, v => isFireInverted = v);
+        makeInvertToggle(btnInvertUranium, () => isUraniumInverted, v => isUraniumInverted = v);
+        makeInvertToggle(btnInvertMethane, () => isMethaneInverted, v => isMethaneInverted = v);
+        makeInvertToggle(btnInvertSteam, () => isSteamInverted, v => isSteamInverted = v);
+
+        btnReset.addEventListener('click', () => {
+            // Reset tools
+            currentMaterialTool = 1;
+            setActiveButton(btnSand);
+
+            // Reset sliders
+            brushSizeDom.value = 4;
+            simSpeedDom.value = 3;
+            gravityIntensityDom.value = 1;
+            fireTempDom.value = 40;
+            updateFireTempLabel();
+
+            // Reset time
+            isPaused = false;
+            btnPause.classList.remove('active');
+            btnPause.innerText = 'Pause Time';
+
+            // Reset gravity inversions
+            isInvertedGravity = false; btnInvertAll.classList.remove('active');
+            isSandInverted = false; btnInvertSand.classList.remove('active');
+            isStoneInverted = false; btnInvertStone.classList.remove('active');
+            isSteelInverted = false; btnInvertSteel.classList.remove('active');
+            isWaterInverted = false; btnInvertWater.classList.remove('active');
+            isAcidInverted = false; btnInvertAcid.classList.remove('active');
+            isAcidPowderInverted = false; btnInvertAcidPowder.classList.remove('active');
+            isLavaInverted = false; btnInvertLava.classList.remove('active');
+            isMoltenMetalInverted = false; btnInvertMoltenMetal.classList.remove('active');
+            isObsidianInverted = false; btnInvertObsidian.classList.remove('active');
+            isWoodInverted = false; btnInvertWood.classList.remove('active');
+            isLightningInverted = false; btnInvertLightning.classList.remove('active');
+            isGlassInverted = false; btnInvertGlass.classList.remove('active');
+            isIceInverted = false; btnInvertIce.classList.remove('active');
+            isNitrogenInverted = false; btnInvertNitrogen.classList.remove('active');
+            isFireInverted = false; btnInvertFire.classList.remove('active');
+            isUraniumInverted = false; btnInvertUranium.classList.remove('active');
+            isMethaneInverted = false; btnInvertMethane.classList.remove('active');
+            isSteamInverted = false; btnInvertSteam.classList.remove('active');
+        });
+
+        // Fire temperature label updater
+        function updateFireTempLabel() {
+            const t = parseInt(fireTempDom.value);
+            let label;
+            if (t < 15) label = '❄ Ember';
+            else if (t < 30) label = '🔴 Cool';
+            else if (t < 50) label = '🟠 Normal';
+            else if (t < 65) label = '🟡 Hot';
+            else if (t < 80) label = '⬜ Intense';
+            else label = '🔵 Plasma';
+            fireTempLabelDom.textContent = label;
+        }
+        fireTempDom.addEventListener('input', updateFireTempLabel);
+        updateFireTempLabel();
+
+        // UI toggles
+        btnToggleUi.addEventListener('click', () => {
+            mainHeader.classList.toggle('hidden');
+            if (mainHeader.classList.contains('hidden') && document.fullscreenElement) {
+                simCanvasContainer.classList.add('maximized');
+            } else if (!document.fullscreenElement) {
+                simCanvasContainer.classList.toggle('maximized', mainHeader.classList.contains('hidden'));
+            }
+        });
+
+        btnFullscreen.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch((err) => {
+                    console.log(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                // Hitting fullscreen automatically maximizes canvas and floats UI elegantly at the bottom
+                simCanvasContainer.classList.add('maximized');
+                mainHeader.classList.add('fullscreen-overlay');
+                mainHeader.classList.remove('hidden');
+            } else {
+                // Coming back out of fullscreen restores normal flow
+                simCanvasContainer.classList.remove('maximized');
+                mainHeader.classList.remove('fullscreen-overlay');
+                mainHeader.classList.remove('hidden');
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName.toLowerCase() === 'input') return;
+
+            switch (e.key.toLowerCase()) {
+                case '1': btnSand.click(); break;
+                case '2': btnStone.click(); break;
+                case '3': btnSteel.click(); break;
+                case '4': btnMetal.click(); break;
+                case '5': btnWater.click(); break;
+                case '6': btnAcid.click(); break;
+                case 'u': btnAcidPowder.click(); break;
+                case '7': btnLava.click(); break;
+                case '8': btnObsidian.click(); break;
+                case 'w': btnWood.click(); break;
+                case 'l': btnLightning.click(); break;
+                case 'g': btnGlass.click(); break;
+                case 'e': btnIce.click(); break;
+                case 'n': btnNitrogen.click(); break;
+                case 'k': btnGunpowder.click(); break;
+                case 'm': btnMeltedSand.click(); break;
+                case 's': btnGlassShards.click(); break;
+                case 'x': btnFire.click(); break;
+                case '9': btnPortalBlue.click(); break;
+                case '0': btnPortalOrange.click(); break;
+                case 'u': btnUranium.click(); break;
+                case 'q': btnMethane.click(); break;
+                case 'v': btnSteam.click(); break;
+                case '-': btnErase.click(); break;
+                case 'p': btnPause.click(); break;
+                case 'c':
+                    if (e.shiftKey) { btnClearActive.click(); }
+                    else { btnClear.click(); }
+                    break;
+                case 'i': btnInvertAll.click(); break;
+                case 'r': btnReset.click(); break;
+                case 'f': btnFullscreen.click(); break;
+                case 'h': btnToggleUi.click(); break;
+            }
+        });
+
+        function renderFramePipeline() {
+            // Read fire temperature slider once at the top — used by both physics and render
+            const currentFireTemp = parseInt(fireTempDom.value); // 0-100
+
+            // STEP 0: Track Portals globally
+            let portalOutCells = Array.from({ length: 10 }, () => []);
+            let portalInMap = Array.from({ length: 10 }, () => new Map());
+            if (grid) {
+                for (let c = 0; c < width; c++) {
+                    for (let r = 0; r < height; r++) {
+                        let val = grid[c][r];
+                        if (val >= 131 && val <= 139) {
+                            let ch = val - 130;
+                            portalInMap[ch].set((c << 16) | r, portalInMap[ch].size);
+                        }
+                        else if (val >= 141 && val <= 149) {
+                            let ch = val - 140;
+                            portalOutCells[ch].push({ x: c, y: r });
+                        }
+                    }
+                }
+            }
+
+            // STEP 0.5: Heat Simulation (Invisible Heat Map)
+            if (grid && !isPaused) {
+                // Phase 1: Heat Injection from sources
+                for (let c = 0; c < width; c++) {
+                    for (let r = 0; r < height; r++) {
+                        let val = grid[c][r];
+                        if (val === 0) continue;
+                        let idx = c * height + r;
+
+                        if ((val >= 168 && val <= 171) || (val >= 178 && val <= 181) || (val >= 213 && val <= 236)) {
+                            heatGrid[idx] = 100; // Fire
+                        } else if (val >= 118 && val <= 121) {
+                            heatGrid[idx] = 95; // Lava
+                        } else if (val >= 182 && val <= 185) {
+                            heatGrid[idx] = 90; // Molten Metal
+                        } else if (val >= 189 && val <= 212) {
+                            heatGrid[idx] = 120; // Burning Thermite
+                        } else if (val >= 175 && val <= 177) {
+                            heatGrid[idx] = 70; // Burning Wood
+                        } else if (val >= 237 && val <= 240) {
+                            heatGrid[idx] = 85; // Melted Sand
+                        } else if (val >= 248 && val <= 251) {
+                            heatGrid[idx] = 160; // Uranium (Very Hot)
+                        } else if ((val >= 165 && val <= 167) || (val >= 162 && val <= 164)) {
+                            heatGrid[idx] = 0; // Nitrogen/Ice (Cold)
+                        }
+                    }
+                }
+
+                // Phase 2: Diffusion and Dissipation
+                for (let c = 0; c < width; c++) {
+                    for (let r = 0; r < height; r++) {
+                        let idx = c * height + r;
+                        let val = grid[c][r];
+
+                        // Faster 4-way diffusion
+                        let sum = heatGrid[idx]; 
+                        let count = 1.0;
+
+                        if (c > 0) { sum += heatGrid[(c - 1) * height + r]; count++; }
+                        if (c < width - 1) { sum += heatGrid[(c + 1) * height + r]; count++; }
+                        if (r > 0) { sum += heatGrid[c * height + (r - 1)]; count++; }
+                        if (r < height - 1) { sum += heatGrid[c * height + (r + 1)]; count++; }
+
+                        let avg = sum / count;
+
+                        // Dissipation: Material-dependent thermal conductivity
+                        let coolFactor = 0.98; // Solid materials
+                        if (val === 0) {
+                            coolFactor = 0.97; // Air (loses heat faster to space)
+                        } else if ((val >= 6 && val <= 9) || (val >= 116 && val <= 117) || (val >= 118 && val <= 121) || (val >= 182 && val <= 185) || (val >= 237 && val <= 240)) {
+                            coolFactor = 0.995; // Liquids (conduct/retain heat very well)
+                        }
+
+                        let nextHeat = avg * coolFactor;
+                        heatGridNext[idx] = nextHeat < 0.5 ? 0 : nextHeat;
+                    }
+                }
+                heatGrid.set(heatGridNext);
+            }
+            if (isActivelyHoldingDown && mouseX >= 0 && mouseX < width && mouseY >= 0 && mouseY < height) {
+                const brushRad = parseInt(brushSizeDom.value);
+
+                // Bresenham's line algorithm to seamlessly connect gaps when moving the mouse fast
+                let x0 = lastDrawnX === -1 ? mouseX : lastDrawnX;
+                let y0 = lastDrawnY === -1 ? mouseY : lastDrawnY;
+                let x1 = mouseX;
+                let y1 = mouseY;
+
+                let dx = Math.abs(x1 - x0);
+                let dy = Math.abs(y1 - y0);
+                let sx = (x0 < x1) ? 1 : -1;
+                let sy = (y0 < y1) ? 1 : -1;
+                let err = dx - dy;
+
+                while (true) {
+                    // Construct a mathematical circle at this interpolated point
+                    for (let i = -brushRad; i <= brushRad; i++) {
+                        for (let j = -brushRad; j <= brushRad; j++) {
+                            // Circle perimeter condition using distance squared formula
+                            if (i * i + j * j <= brushRad * brushRad) {
+
+                                // Only sand, water, and stone use the scatter RNG for organic spacing
+                                if ((currentMaterialTool === 1 || currentMaterialTool === 3 || currentMaterialTool === 4 || currentMaterialTool === 9 || currentMaterialTool === 10 || currentMaterialTool === 13 || currentMaterialTool === 14 || currentMaterialTool === 15 || currentMaterialTool === 16 || currentMaterialTool === 17 || currentMaterialTool === 18 || currentMaterialTool === 19 || currentMaterialTool === 20 || currentMaterialTool === 21 || currentMaterialTool === 22 || currentMaterialTool === 23 || currentMaterialTool === 24) && Math.random() > 0.4) continue;
+
+                                let projectedGridColumn = x0 + i;
+                                let projectedGridRow = y0 + j;
+
+                                // Prevent memory out-of-bounds mapping
+                                if (projectedGridColumn >= 0 && projectedGridColumn < width &&
+                                    projectedGridRow >= 0 && projectedGridRow < height) {
+
+                                    if (currentMaterialTool === 1) {
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 1;
+                                    } else if (currentMaterialTool === 2) {
+                                        grid[projectedGridColumn][projectedGridRow] = 5;
+                                    } else if (currentMaterialTool === 3) {
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 6;
+                                    } else if (currentMaterialTool === 4) {
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = 14;
+                                    } else if (currentMaterialTool === 6) {
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = 15;
+                                    } else if (currentMaterialTool === 8) { // Acid
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 2) + 116;
+                                    } else if (currentMaterialTool === 13) { // Acid Powder
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 126;
+                                    } else if (currentMaterialTool === 9) { // Lava
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 118;
+                                    } else if (currentMaterialTool === 10) { // Obsidian
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = 122;
+                                    } else if (currentMaterialTool === 14) { // Lightning
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = 150;
+                                    } else if (currentMaterialTool === 15) { // Glass Brush
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 3) + 153;
+                                    } else if (currentMaterialTool === 23) { // Glass Shards
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 3) + 159;
+                                    } else if (currentMaterialTool === 16) { // Ice
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 3) + 162;
+                                    } else if (currentMaterialTool === 17) { // Nitrogen
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 3) + 165;
+                                    } else if (currentMaterialTool === 18) { // User Fire (temperature-controlled, 178-181)
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 178;
+                                    } else if (currentMaterialTool === 19) { // Wood
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 3) + 172;
+                                    } else if (currentMaterialTool === 24) { // Gunpowder
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 241;
+                                    } else if (currentMaterialTool === 25) { // Uranium
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 248;
+                                    } else if (currentMaterialTool === 26) { // Methane
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 252;
+                                    } else if (currentMaterialTool === 27) { // Steam
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 256;
+                                    } else if (currentMaterialTool === 20) { // Molten Metal
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 182;
+                                    } else if (currentMaterialTool === 21) { // Thermite (solid block, like wood)
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 3) + 186;
+                                    } else if (currentMaterialTool === 22) { // Melted Sand
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 237;
+                                    } else if (currentMaterialTool === 11) { // Portal Blue
+                                        let ch = parseInt(portalChannelDom.value) || 1;
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = 130 + ch;
+                                    } else if (currentMaterialTool === 12) { // Portal Orange
+                                        let ch = parseInt(portalChannelDom.value) || 1;
+                                        if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = 140 + ch;
+                                    } else if (currentMaterialTool === 0) {
+                                        grid[projectedGridColumn][projectedGridRow] = 0;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (x0 === x1 && y0 === y1) break;
+                    let e2 = 2 * err;
+                    if (e2 > -dy) { err -= dy; x0 += sx; }
+                    if (e2 < dx) { err += dx; y0 += sy; }
+                }
+
+                lastDrawnX = mouseX;
+                lastDrawnY = mouseY;
+            } else {
+                lastDrawnX = -1;
+                lastDrawnY = -1;
+            }
+
+            // STEP 2: Calculate Sand Automata Gravity Physics
+            if (!isPaused) {
+                function processCell(c, rowScan, passDirection) {
+                    let activeBlockEntityState = grid[c][rowScan];
+
+                    // Phase 0: Heat-based material transformation (Melting/Ignition)
+                    let currentHeatValue = heatGrid[c * height + rowScan];
+                    if (currentHeatValue > 15) {
+                        // Ice melts into water
+                        if (activeBlockEntityState >= 162 && activeBlockEntityState <= 164) {
+                            if (Math.random() < currentHeatValue * 0.01) {
+                                grid[c][rowScan] = Math.floor(Math.random() * 4) + 6;
+                                return;
+                            }
+                        }
+                        // Wood catches fire
+                        if (activeBlockEntityState >= 172 && activeBlockEntityState <= 174 && currentHeatValue > 40) {
+                            if (Math.random() < (currentHeatValue - 40) * 0.005) {
+                                grid[c][rowScan] = Math.floor(Math.random() * 3) + 175;
+                                return;
+                            }
+                        }
+                        // Sand melts into Melted Sand (Glass)
+                        if (currentHeatValue > 85) {
+                            if ((activeBlockEntityState >= 1 && activeBlockEntityState <= 4) || (activeBlockEntityState >= 10 && activeBlockEntityState <= 13)) {
+                                if (Math.random() < (currentHeatValue - 85) * 0.01) {
+                                    grid[c][rowScan] = Math.floor(Math.random() * 4) + 237;
+                                    return;
+                                }
+                            }
+                        }
+                        // Stone melts into Lava at extreme heat
+                        if (currentHeatValue > 115 && activeBlockEntityState === 14) {
+                            if (Math.random() < (currentHeatValue - 110) * 0.005) {
+                                grid[c][rowScan] = Math.floor(Math.random() * 4) + 118;
+                                return;
+                            }
+                        }
+                        // Obsidian melts into Lava at high heat
+                        if (currentHeatValue > 90 && activeBlockEntityState === 122) {
+                            if (Math.random() < (currentHeatValue - 90) * 0.02) {
+                                grid[c][rowScan] = Math.floor(Math.random() * 4) + 118;
+                                return;
+                            }
+                        }
+                        // Glass melts back into Melted Sand
+                        if (currentHeatValue > 90 && ((activeBlockEntityState >= 153 && activeBlockEntityState <= 161) || (activeBlockEntityState >= 245 && activeBlockEntityState <= 247))) {
+                            if (Math.random() < (currentHeatValue - 90) * 0.03) {
+                                grid[c][rowScan] = Math.floor(Math.random() * 4) + 237;
+                                return;
+                            }
+                        }
+                        // Metal/Steel -> Molten Metal
+                        if (currentHeatValue > 95) {
+                            if (activeBlockEntityState === 5 || (activeBlockEntityState >= 15 && activeBlockEntityState <= 115)) {
+                                if (Math.random() < (currentHeatValue - 95) * 0.02) {
+                                    grid[c][rowScan] = Math.floor(Math.random() * 4) + 182;
+                                    return;
+                                }
+                            }
+                        }
+                    }
+
+                    let isCurrentInv = false;
+                    if ((activeBlockEntityState >= 1 && activeBlockEntityState <= 4) || (activeBlockEntityState >= 10 && activeBlockEntityState <= 13)) {
+                        isCurrentInv = isSandInverted;
+                    } else if (activeBlockEntityState >= 6 && activeBlockEntityState <= 9) {
+                        isCurrentInv = isWaterInverted;
+                    } else if (activeBlockEntityState === 14) {
+                        isCurrentInv = isStoneInverted;
+                    } else if (activeBlockEntityState >= 15 && activeBlockEntityState <= 115) {
+                        isCurrentInv = isSteelInverted;
+                    } else if (activeBlockEntityState >= 116 && activeBlockEntityState <= 117) {
+                        isCurrentInv = isAcidInverted;
+                    } else if (activeBlockEntityState >= 126 && activeBlockEntityState <= 129) {
+                        isCurrentInv = isAcidPowderInverted;
+                    } else if (activeBlockEntityState >= 118 && activeBlockEntityState <= 121) {
+                        isCurrentInv = isLavaInverted;
+                    } else if (activeBlockEntityState >= 182 && activeBlockEntityState <= 185) {
+                        isCurrentInv = isMoltenMetalInverted;
+                    } else if (activeBlockEntityState >= 213 && activeBlockEntityState <= 236) {
+                        isCurrentInv = !isFireInverted; // Thermite fire particles float upward, same as normal fire
+                    } else if (activeBlockEntityState >= 186 && activeBlockEntityState <= 212) {
+                        isCurrentInv = isWoodInverted; // Thermite solid block follows wood gravity to be "the same"
+                    } else if (activeBlockEntityState === 122) {
+                        isCurrentInv = isObsidianInverted;
+                    } else if (activeBlockEntityState >= 150 && activeBlockEntityState <= 152) {
+                        isCurrentInv = isLightningInverted;
+                    } else if (activeBlockEntityState >= 153 && activeBlockEntityState <= 161) {
+                        isCurrentInv = isGlassInverted;
+                    } else if (activeBlockEntityState >= 245 && activeBlockEntityState <= 247) {
+                        isCurrentInv = isGlassInverted;
+                    } else if (activeBlockEntityState >= 162 && activeBlockEntityState <= 164) {
+                        isCurrentInv = isIceInverted;
+                    } else if (activeBlockEntityState >= 165 && activeBlockEntityState <= 167) {
+                        isCurrentInv = isNitrogenInverted;
+                    } else if ((activeBlockEntityState >= 168 && activeBlockEntityState <= 171) || (activeBlockEntityState >= 178 && activeBlockEntityState <= 181)) {
+                        isCurrentInv = !isFireInverted;
+                    } else if (activeBlockEntityState >= 172 && activeBlockEntityState <= 177) {
+                        isCurrentInv = isWoodInverted;
+                    } else if (activeBlockEntityState >= 241 && activeBlockEntityState <= 244) {
+                        isCurrentInv = false; // Gunpowder always falls normally unless globally inverted
+                    } else if (activeBlockEntityState >= 237 && activeBlockEntityState <= 240) {
+                        isCurrentInv = isMeltedSandInverted;
+                    } else if (activeBlockEntityState >= 248 && activeBlockEntityState <= 251) {
+                        isCurrentInv = isUraniumInverted;
+                    } else if (activeBlockEntityState >= 252 && activeBlockEntityState <= 255) {
+                        isCurrentInv = !isMethaneInverted; // Gas rises by default
+                    } else if (activeBlockEntityState >= 256 && activeBlockEntityState <= 259) {
+                        isCurrentInv = !isSteamInverted; // Steam rises by default
+                    }
+
+                    // Determines absolute world gravity direction for THIS specific particle
+                    let finalInverted = isInvertedGravity ? !isCurrentInv : isCurrentInv;
+                    let dir = finalInverted ? -1 : 1;
+
+                    // Skip this particle if it's not falling in the direction of the current simulation scan pass
+                    if (dir !== passDirection) return;
+
+                    // Execute Portals! Check sideways and downward teleportation
+                    let pInX = -1;
+                    let pInY = -1;
+                    let bYTest = rowScan + dir;
+
+                    let dDown = (bYTest >= 0 && bYTest < height) ? grid[c][bYTest] : 0;
+                    let dLeft = (c - 1 >= 0) ? grid[c - 1][rowScan] : 0;
+                    let dRight = (c + 1 < width) ? grid[c + 1][rowScan] : 0;
+
+                    if (dDown >= 131 && dDown <= 139) {
+                        pInX = c;
+                        pInY = bYTest;
+                    } else if (dLeft >= 131 && dLeft <= 139) {
+                        pInX = c - 1;
+                        pInY = rowScan;
+                    } else if (dRight >= 131 && dRight <= 139) {
+                        pInX = c + 1;
+                        pInY = rowScan;
+                    }
+
+                    if (pInX !== -1) { // Only Portal In takes material
+                        let ch = grid[pInX][pInY] - 130;
+                        let targets = portalOutCells[ch];
+                        if (targets && targets.length > 0) {
+                            let blueIdx = portalInMap[ch].get((pInX << 16) | pInY) || 0;
+                            let exit = targets[blueIdx % targets.length];
+
+                            let exitX = exit.x;
+                            let exitY = exit.y;
+                            let dx = pInX - c;
+                            let dy = pInY - rowScan;
+
+                            // Fast-forward through the portal mass in the entering direction
+                            while (exitX + dx >= 0 && exitX + dx < width && exitY + dy >= 0 && exitY + dy < height && grid[exitX + dx][exitY + dy] === 140 + ch) {
+                                exitX += dx;
+                                exitY += dy;
+                            }
+
+                            // Attempt to pop it out going forward (same dx, dy) to keep the shape intact!
+                            let tryDirs;
+                            if (dx === 0) { // Vertical entry
+                                tryDirs = [[0, dy], [-1, dy], [1, dy], [0, -dy], [-1, 0], [1, 0]];
+                            } else { // Horizontal entry
+                                tryDirs = [[dx, 0], [dx, -1], [dx, 1], [-dx, 0], [0, -1], [0, 1]];
+                            }
+
+                            for (let d of tryDirs) {
+                                let px = exitX + d[0];
+                                let py = exitY + d[1];
+                                if (px >= 0 && px < width && py >= 0 && py < height && grid[px][py] === 0) {
+                                    grid[px][py] = activeBlockEntityState;
+                                    grid[c][rowScan] = 0;
+                                    return; // Teleported successfully!
+                                }
+                            }
+                        }
+                    }
+
+                    function isLiquidOrEmpty(val) { return val === 0 || (val >= 6 && val <= 9) || (val >= 116 && val <= 117) || (val >= 118 && val <= 121) || (val >= 165 && val <= 167) || (val >= 168 && val <= 171) || (val >= 178 && val <= 181) || (val >= 182 && val <= 185) || (val >= 213 && val <= 236) || (val >= 237 && val <= 240); }
+                    function isWater(val) { return val >= 6 && val <= 9; }
+
+                    function swapWithDisplacement(srcX, srcY, tgtX, tgtY) {
+                        let tgtEntity = grid[tgtX][tgtY];
+                        grid[tgtX][tgtY] = grid[srcX][srcY];
+
+                        // Splash effect: if falling straight down into a liquid, forcefully displace it outwards at the surface
+                        if (tgtEntity !== 0 && srcX === tgtX) {
+                            let pushed = false;
+                            let pushDirs = [[-1, 0], [1, 0], [-1, -dir], [1, -dir]]; // try horizontal sides and diagonals backwards
+                            pushDirs.sort(() => Math.random() - 0.5);
+                            for (let d of pushDirs) {
+                                let px = srcX + d[0];
+                                let py = srcY + d[1];
+                                if (px >= 0 && px < width && py >= 0 && py < height && grid[px][py] === 0) {
+                                    grid[px][py] = tgtEntity;
+                                    pushed = true;
+                                    break;
+                                }
+                            }
+                            grid[srcX][srcY] = pushed ? 0 : tgtEntity;
+                        } else {
+                            grid[srcX][srcY] = tgtEntity;
+                        }
+                    }
+
+                    if ((activeBlockEntityState >= 1 && activeBlockEntityState <= 4) || (activeBlockEntityState >= 10 && activeBlockEntityState <= 13) || (activeBlockEntityState >= 126 && activeBlockEntityState <= 129) || (activeBlockEntityState >= 241 && activeBlockEntityState <= 244)) {
+                        // Sand, Acid Powder, and Gunpowder
+
+                        if (activeBlockEntityState >= 126 && activeBlockEntityState <= 129) {
+                            let touchWater = false;
+                            for (let i = -1; i <= 1; i++) {
+                                for (let j = -1; j <= 1; j++) {
+                                    if (i === 0 && j === 0) continue;
+                                    let checkX = c + i;
+                                    let checkY = rowScan + j;
+                                    if (checkX >= 0 && checkX < width && checkY >= 0 && checkY < height) {
+                                        if (isWater(grid[checkX][checkY])) {
+                                            grid[checkX][checkY] = 116 + Math.floor(Math.random() * 2); // Turn water to acid
+                                            touchWater = true;
+                                        }
+                                    }
+                                }
+                            }
+                            if (touchWater) {
+                                grid[c][rowScan] = 116 + Math.floor(Math.random() * 2); // Powder turns to acid
+                                return;
+                            }
+                        }
+
+                        // Check for surrounding water to become wet (only if currently dry sand)
+                        if (activeBlockEntityState >= 1 && activeBlockEntityState <= 4) {
+                            let touchWater = false;
+                            for (let i = -1; i <= 1; i++) {
+                                for (let j = -1; j <= 1; j++) {
+                                    if (i === 0 && j === 0) continue;
+                                    let checkX = c + i;
+                                    let checkY = rowScan + j;
+                                    if (checkX >= 0 && checkX < width && checkY >= 0 && checkY < height) {
+                                        if (isWater(grid[checkX][checkY])) {
+                                            touchWater = true;
+                                            if (Math.random() < 0.5) {
+                                                grid[checkX][checkY] = 0;
+                                            } else {
+                                                let pushed = false;
+                                                let pushDirs = [
+                                                    [-1, 0], [1, 0], [-1, -dir], [1, -dir], [0, -dir]
+                                                ];
+                                                pushDirs.sort(() => Math.random() - 0.5);
+                                                for (let d of pushDirs) {
+                                                    let pX = checkX + d[0];
+                                                    let pY = checkY + d[1];
+                                                    if (pX >= 0 && pX < width && pY >= 0 && pY < height) {
+                                                        if (grid[pX][pY] === 0) {
+                                                            grid[pX][pY] = grid[checkX][checkY];
+                                                            grid[checkX][checkY] = 0;
+                                                            pushed = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (touchWater) break;
+                            }
+                            if (touchWater) {
+                                grid[c][rowScan] = activeBlockEntityState + 9;
+                                activeBlockEntityState = grid[c][rowScan];
+                            }
+                        }
+
+                        let bY = rowScan + dir;
+                        if (bY < 0 || bY >= height) return;
+                        let beneathEntity = grid[c][bY];
+
+                        let bLeftX = c - 1;
+                        let bRightX = c + 1;
+                        let beneathLeftEntity = (bLeftX >= 0 && bLeftX < width) ? grid[bLeftX][bY] : 5;
+                        let beneathRightEntity = (bRightX >= 0 && bRightX < width) ? grid[bRightX][bY] : 5;
+
+                        if (isLiquidOrEmpty(beneathEntity)) {
+                            swapWithDisplacement(c, rowScan, c, bY);
+                        } else if (isLiquidOrEmpty(beneathLeftEntity) && isLiquidOrEmpty(beneathRightEntity)) {
+                            let slideChance = (activeBlockEntityState >= 10 && activeBlockEntityState <= 13) ? 0.1 : 1.0;
+                            if (Math.random() < slideChance) {
+                                if (Math.random() > 0.5) {
+                                    swapWithDisplacement(c, rowScan, bLeftX, bY);
+                                } else {
+                                    swapWithDisplacement(c, rowScan, bRightX, bY);
+                                }
+                            }
+                        } else if (isLiquidOrEmpty(beneathLeftEntity)) {
+                            let slideChance = (activeBlockEntityState >= 10 && activeBlockEntityState <= 13) ? 0.1 : 1.0;
+                            if (Math.random() < slideChance) {
+                                swapWithDisplacement(c, rowScan, bLeftX, bY);
+                            }
+                        } else if (isLiquidOrEmpty(beneathRightEntity)) {
+                            let slideChance = (activeBlockEntityState >= 10 && activeBlockEntityState <= 13) ? 0.1 : 1.0;
+                            if (Math.random() < slideChance) {
+                                swapWithDisplacement(c, rowScan, bRightX, bY);
+                            }
+                        }
+
+                        // Gunpowder Detonation check
+                        if (activeBlockEntityState >= 241 && activeBlockEntityState <= 244) {
+                            let detonate = false;
+                            for (let i = -1; i <= 1; i++) {
+                                for (let j = -1; j <= 1; j++) {
+                                    if (i === 0 && j === 0) continue;
+                                    let cx = c + i; let cy = rowScan + j;
+                                    if (cx >= 0 && cx < width && cy >= 0 && cy < height) {
+                                        let v = grid[cx][cy];
+                                        // Detonate near fire/heat/lava/melted sand/other explosions
+                                        if ((v >= 168 && v <= 171) || (v >= 175 && v <= 181) || (v >= 189 && v <= 212) || (v >= 118 && v <= 121) || (v >= 182 && v <= 185) || (v >= 237 && v <= 240) || v === 150) {
+                                            detonate = true; break;
+                                        }
+                                    }
+                                }
+                                if (detonate) break;
+                            }
+
+                            // Hot environment also triggers detonation
+                            if (!detonate && heatGrid && heatGrid[c + rowScan * width] > 80) {
+                                detonate = true;
+                            }
+
+                            if (detonate) {
+                                // Instant Chain Reaction: Consume all nearby gunpowder to create one big BOOM
+                                let totalGrains = 1;
+                                for (let ni = -24; ni <= 24; ni++) {
+                                    for (let nj = -24; nj <= 24; nj++) {
+                                        if (ni === 0 && nj === 0) continue;
+                                        let nx = c + ni; let ny = rowScan + nj;
+                                        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                            let v = grid[nx][ny];
+                                            if (v >= 241 && v <= 244) {
+                                                grid[nx][ny] = 0; // Consume neighbors instantly in the same frame
+                                                totalGrains++;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Calculate explosion radius based on energy
+                                const radius = Math.min(45, 10 + Math.floor(Math.sqrt(totalGrains) * 2.5));
+                                const explHeat = 100;
+
+                                // Inject heat into epicenter
+                                if (heatGridNext) heatGridNext[c + rowScan * width] = 100;
+
+                                // Optimized Single-Pass Blast Loop
+                                for (let i = -radius; i <= radius; i++) {
+                                    for (let j = -radius; j <= radius; j++) {
+                                        let distSq = i * i + j * j;
+                                        if (distSq > radius * radius) continue;
+
+                                        let ex = c + i; let ey = rowScan + j;
+                                        if (ex < 0 || ex >= width || ey < 0 || ey >= height) continue;
+
+                                        let curVal = grid[ex][ey];
+                                        if (curVal === 0 || curVal === 5 || (curVal >= 131 && curVal <= 149)) continue;
+
+                                        let dist = Math.sqrt(distSq);
+                                        let dx = Math.sign(i); let dy = Math.sign(j);
+                                        if (dx === 0 && dy === 0) dy = -1;
+
+                                        // Push force increases with distance
+                                        let force = dist < (radius * 0.4) ? 3 : (dist < (radius * 0.7) ? 2 : 1);
+                                        let tx = ex + dx * force;
+                                        let ty = ey + dy * force;
+
+                                        let particle = curVal;
+                                        let moved = false;
+
+                                        if (tx >= 0 && tx < width && ty >= 0 && ty < height) {
+                                            if (grid[tx][ty] === 0 || (grid[tx][ty] >= 6 && grid[tx][ty] <= 9)) {
+                                                grid[tx][ty] = curVal;
+                                                grid[ex][ey] = 0;
+                                                moved = true;
+                                            }
+                                        }
+
+                                        // Melting / Ignition Thresholds
+                                        let localHeat = explHeat * (1 - dist / radius);
+                                        let fx = moved ? tx : ex;
+                                        let fy = moved ? ty : ey;
+
+                                        if (localHeat > 40) {
+                                            if ((particle >= 172 && particle <= 174) || (particle >= 186 && particle <= 188)) {
+                                                grid[fx][fy] = Math.floor(Math.random() * 3) + 175; // Ignite
+                                            } else if (particle >= 241 && particle <= 244) {
+                                                grid[fx][fy] = Math.floor(Math.random() * 4) + 178; // Gunpowder consumed by blast turns to fire
+                                            } else if (localHeat > 70 && ((particle >= 1 && particle <= 4) || (particle >= 10 && particle <= 13))) {
+                                                grid[fx][fy] = 237 + Math.floor(Math.random() * 4); // Sand -> Melted
+                                            } else if (localHeat > 85 && (particle === 14 || particle === 122)) {
+                                                grid[fx][fy] = 118 + Math.floor(Math.random() * 4); // Stone -> Lava
+                                            } else if (localHeat > 95 && (particle >= 15 && particle <= 115)) {
+                                                grid[fx][fy] = 182 + Math.floor(Math.random() * 4); // Steel -> Molten
+                                            }
+                                        }
+
+                                        if (moved && Math.random() < 0.1) {
+                                            grid[ex][ey] = Math.floor(Math.random() * 4) + 178;
+                                        }
+                                    }
+                                }
+                                return;
+                            }
+                        }
+                    } else if (activeBlockEntityState === 14 || activeBlockEntityState === 122 || (activeBlockEntityState >= 162 && activeBlockEntityState <= 164) || (activeBlockEntityState >= 172 && activeBlockEntityState <= 177) || (activeBlockEntityState >= 186 && activeBlockEntityState <= 212) || (activeBlockEntityState >= 248 && activeBlockEntityState <= 251)) { // Stone, Obsidian, Ice, Wood, Thermite, Uranium physics
+                        if (activeBlockEntityState >= 172 && activeBlockEntityState <= 174) { // Normal Wood - check for catching fire
+                            let isTouchingWater = false;
+                            let fireSources = 0;
+                            let burningWoodNeighbors = 0;
+                            for (let i = -1; i <= 1; i++) {
+                                for (let j = -1; j <= 1; j++) {
+                                    if (i === 0 && j === 0) continue;
+                                    let nx = c + i; let ny = rowScan + j;
+                                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                        let v = grid[nx][ny];
+                                        if (v >= 6 && v <= 9) isTouchingWater = true;
+                                        if ((v >= 168 && v <= 171) || (v >= 213 && v <= 236)) fireSources += 2; // wood/thermite fire ignites
+                                        if (v >= 178 && v <= 181) fireSources += 2; // user fire ignites
+                                        if (v >= 118 && v <= 121) fireSources += 3; // lava ignites even faster
+                                        if ((v >= 175 && v <= 177) || (v >= 189 && v <= 212)) burningWoodNeighbors++; // burning wood/thermite spreads fire
+                                    }
+                                }
+                            }
+                            let totalHeat = fireSources + burningWoodNeighbors;
+                            if (!isTouchingWater && totalHeat > 0) {
+                                // Catch fire: transition to burning wood state first
+                                if (Math.random() < 0.03 * totalHeat) {
+                                    grid[c][rowScan] = Math.floor(Math.random() * 3) + 175; // Ignite: become burning wood!
+                                    return;
+                                }
+                            }
+                        } else if (activeBlockEntityState >= 175 && activeBlockEntityState <= 177) { // Burning Wood - glows and spreads fire
+                            let isTouchingWater = false;
+                            for (let i = -1; i <= 1; i++) {
+                                for (let j = -1; j <= 1; j++) {
+                                    if (i === 0 && j === 0) continue;
+                                    let nx = c + i; let ny = rowScan + j;
+                                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                        let v = grid[nx][ny];
+                                        if (v >= 6 && v <= 9) { isTouchingWater = true; grid[nx][ny] = Math.floor(Math.random() * 4) + 256; } // water vaporizes to steam
+                                    }
+                                }
+                            }
+                            if (isTouchingWater) {
+                                // Water extinguishes burning wood, reverts to charred (stone-like)
+                                grid[c][rowScan] = Math.floor(Math.random() * 3) + 172; // back to regular wood (wet/saved)
+                                return;
+                            }
+
+                            // Burning wood constantly flickers and emits fire upward
+                            if (Math.random() < 0.15) {
+                                // Spawn fire particles into empty cells above/around
+                                let fireSpawnDirs = [[0, -dir], [-1, -dir], [1, -dir], [-1, 0], [1, 0]];
+                                for (let d of fireSpawnDirs) {
+                                    let fx = c + d[0];
+                                    let fy = rowScan + d[1];
+                                    if (fx >= 0 && fx < width && fy >= 0 && fy < height && grid[fx][fy] === 0) {
+                                        grid[fx][fy] = Math.floor(Math.random() * 4) + 168;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // Burning wood randomly consumes itself into fire or ash (empty)
+                            if (Math.random() < 0.008) {
+                                grid[c][rowScan] = Math.floor(Math.random() * 4) + 168; // Fully combusts into fire!
+                                return;
+                            }
+
+                            // Flicker the burning wood color
+                            if (Math.random() < 0.1) {
+                                grid[c][rowScan] = Math.floor(Math.random() * 3) + 175;
+                            }
+                        } else if (activeBlockEntityState >= 186 && activeBlockEntityState <= 188) { // Unlit Thermite - check for ignition
+                            let isTouchingWater = false;
+                            let heat = 0;
+                            for (let i = -1; i <= 1; i++) {
+                                for (let j = -1; j <= 1; j++) {
+                                    if (i === 0 && j === 0) continue;
+                                    let nx = c + i; let ny = rowScan + j;
+                                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                        let v = grid[nx][ny];
+                                        if (v >= 6 && v <= 9) isTouchingWater = true;
+                                        if (v >= 168 && v <= 171) heat += 2; // wood fire
+                                        if (v >= 178 && v <= 181) heat += 2; // user fire
+                                        if (v >= 213 && v <= 236) heat += 2; // thermite fire
+                                        if (v >= 118 && v <= 121) heat += 3; // lava
+                                        if (v >= 182 && v <= 185) heat += 3; // molten metal
+                                        if (v >= 175 && v <= 177) heat += 1; // burning wood
+                                        if (v >= 189 && v <= 212) heat += 2; // burning thermite
+                                    }
+                                }
+                            }
+                            if (!isTouchingWater && heat > 0 && Math.random() < 0.015 * heat) {
+                                // Ignite: retain current fire temp if lit by user fire, otherwise use "normal" or neighbor's tier
+                                let tier = 2; // default normal
+                                // Sample one neighbor to steal tier if possible
+                                for (let i = -1; i <= 1; i++) {
+                                    for (let j = -1; j <= 1; j++) {
+                                        let nx = c + i; let ny = rowScan + j;
+                                        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                            let v = grid[nx][ny];
+                                            if (v >= 189 && v <= 212) { tier = Math.floor((v - 189) / 4); break; }
+                                            if (v >= 213 && v <= 236) { tier = Math.floor((v - 213) / 4); break; }
+                                            if (v >= 178 && v <= 181) {
+                                                const t = currentFireTemp;
+                                                tier = t < 15 ? 0 : t < 30 ? 1 : t < 50 ? 2 : t < 65 ? 3 : t < 80 ? 4 : 5;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                grid[c][rowScan] = 189 + tier * 4 + Math.floor(Math.random() * 4);
+                                return;
+                            }
+                        } else if (activeBlockEntityState >= 189 && activeBlockEntityState <= 212) { // Burning Thermite
+                            const myTier = Math.floor((activeBlockEntityState - 189) / 4);
+                            const firePart = () => 213 + myTier * 4 + Math.floor(Math.random() * 4);
+
+                            let isTouchingWater = false;
+                            for (let i = -1; i <= 1; i++) {
+                                for (let j = -1; j <= 1; j++) {
+                                    if (i === 0 && j === 0) continue;
+                                    let nx = c + i; let ny = rowScan + j;
+                                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                        let v = grid[nx][ny];
+                                        if ((v >= 6 && v <= 9) || (v >= 165 && v <= 167)) { isTouchingWater = true; if (v >= 6 && v <= 9) grid[nx][ny] = Math.floor(Math.random() * 4) + 256; }
+                                    }
+                                }
+                            }
+                            if (isTouchingWater) {
+                                grid[c][rowScan] = 186 + Math.floor(Math.random() * 3); // Extinguish
+                                return;
+                            }
+
+                            if (Math.random() < 0.15) {
+                                let fireSpawnDirs = [[0, -dir], [-1, -dir], [1, -dir], [-1, 0], [1, 0]];
+                                for (let d of fireSpawnDirs) {
+                                    let fx = c + d[0]; let fy = rowScan + d[1];
+                                    if (fx >= 0 && fx < width && fy >= 0 && fy < height && grid[fx][fy] === 0) {
+                                        grid[fx][fy] = firePart();
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (Math.random() < 0.008) { grid[c][rowScan] = 0; return; }
+
+                            if (Math.random() < 0.1) {
+                                grid[c][rowScan] = 189 + myTier * 4 + Math.floor(Math.random() * 4);
+                            }
+                        } else if (activeBlockEntityState >= 162 && activeBlockEntityState <= 164) {
+                            let touchLava = false;
+                            let touchAcid = false;
+                            for (let i = -1; i <= 1; i++) {
+                                for (let j = -1; j <= 1; j++) {
+                                    if (i === 0 && j === 0) continue;
+                                    let nx = c + i; let ny = rowScan + j;
+                                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                        let v = grid[nx][ny];
+                                        if (v >= 118 && v <= 121) touchLava = true;
+                                        if (v >= 116 && v <= 117) touchAcid = true;
+                                    }
+                                }
+                            }
+                            if (touchLava || (touchAcid && Math.random() < 0.1)) { // Acid melts Ice somewhat slower than Lava
+                                grid[c][rowScan] = Math.floor(Math.random() * 4) + 6; // Turn ice to water
+                                return; // Stop processing this cell this frame
+                            }
+                        } else if (activeBlockEntityState >= 248 && activeBlockEntityState <= 251) { // Uranium contact-evaporates water & acid
+                            for (let i = -1; i <= 1; i++) {
+                                for (let j = -1; j <= 1; j++) {
+                                    if (i === 0 && j === 0) continue;
+                                    let nx = c + i; let ny = rowScan + j;
+                                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                        let v = grid[nx][ny];
+                                        if (v >= 6 && v <= 9) { // Water
+                                            if (Math.random() < 0.5) {
+                                                grid[nx][ny] = Math.floor(Math.random() * 4) + 256; // Steam
+                                            }
+                                        } else if (v >= 116 && v <= 117) { // Acid
+                                            if (Math.random() < 0.5) {
+                                                grid[nx][ny] = Math.floor(Math.random() * 4) + 252; // Methane
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        let bY = rowScan + dir;
+                        if (bY >= 0 && bY < height) {
+                            let beneathEntity = grid[c][bY];
+                            if (isLiquidOrEmpty(beneathEntity)) {
+                                swapWithDisplacement(c, rowScan, c, bY);
+                            } else if (beneathEntity >= 153 && beneathEntity <= 155) {
+                                // Heavy object falls on glass, shatter it
+                                grid[c][bY] = beneathEntity + 6; // become shards 159-161
+                            }
+                        }
+                    } else if (activeBlockEntityState >= 15 && activeBlockEntityState <= 115) { // Steel physics
+                        let bY = rowScan + dir;
+                        let steelVel = activeBlockEntityState - 15;
+
+                        if (bY >= 0 && bY < height) {
+                            let beneathEntity = grid[c][bY];
+                            // NEW: Check if there's air beneath the layer of sand/water we just hit (up to a short distance, meaning it's a "thin layer")
+                            let isThinLayer = false;
+                            if ((beneathEntity >= 1 && beneathEntity <= 4) || (beneathEntity >= 10 && beneathEntity <= 13) || isLiquidOrEmpty(beneathEntity)) {
+                                let bY2 = bY + dir;
+                                if (bY2 >= 0 && bY2 < height && isLiquidOrEmpty(grid[c][bY2])) {
+                                    isThinLayer = true;
+                                }
+                            }
+
+                            if (isLiquidOrEmpty(beneathEntity) || isThinLayer) {
+                                grid[c][rowScan] = Math.min(activeBlockEntityState + 1, 115); // Accelerate
+                                swapWithDisplacement(c, rowScan, c, bY);
+                            } else if ((beneathEntity >= 1 && beneathEntity <= 4) || (beneathEntity >= 10 && beneathEntity <= 13)) {
+                                // Hit sand! Dent it based on velocity (fall height)
+                                let craterRadius = Math.floor(steelVel / 4); // Max dent is ~25 radius!
+
+                                if (craterRadius > 0) {
+                                    let displacedParticles = [];
+                                    for (let i = -craterRadius; i <= craterRadius; i++) {
+                                        for (let j = -craterRadius; j <= craterRadius; j++) {
+                                            if (i * i + j * j <= craterRadius * craterRadius) {
+                                                let cx = c + i;
+                                                let cy = bY + j * dir;
+                                                if (cx >= 0 && cx < width && cy >= 0 && cy < height) {
+                                                    let tgt = grid[cx][cy];
+                                                    // Sand or water gets pushed/displaced
+                                                    if ((tgt >= 1 && tgt <= 4) || (tgt >= 6 && tgt <= 13)) {
+                                                        displacedParticles.push(tgt);
+                                                        grid[cx][cy] = 0;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Displace particles outwards like an explosion
+                                    for (let particle of displacedParticles) {
+                                        for (let attempts = 0; attempts < 10; attempts++) {
+                                            let angle = Math.random() * Math.PI; // 0 to PI
+                                            let dist = craterRadius + 2 + Math.random() * (craterRadius * 1.5 + 5);
+                                            let dx = Math.cos(angle) * dist;
+                                            // Throw opposite to gravity direction
+                                            let dy = -Math.sin(angle) * dist * dir;
+                                            let splx = Math.floor(c + dx);
+                                            let sply = Math.floor(bY + dy);
+
+                                            if (splx >= 0 && splx < width && sply >= 0 && sply < height) {
+                                                if (grid[splx][sply] === 0) {
+                                                    grid[splx][sply] = particle;
+                                                    break; // Placed successfully
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                grid[c][rowScan] = 15; // Reset velocity on impact
+
+
+                            } else if (beneathEntity === 5) { // Hit metal
+                                // Check structural weight stacked directly above this steel block
+                                let weight = 0;
+                                for (let i = 1; i <= 10; i++) {
+                                    let checkY = rowScan - dir * i;
+                                    if (checkY >= 0 && checkY < height && grid[c][checkY] >= 15) {
+                                        weight++;
+                                    } else {
+                                        break;
+                                    }
+                                }
+
+                                if (weight >= 8) {
+                                    // Heavy enough to SNAP metal immediately
+                                    grid[c][bY] = 15;
+                                    grid[c][rowScan] = 0;
+                                } else if (weight >= 3) {
+                                    // Heavy enough to BEND metal (pushes metal out of the way)
+                                    let bY2 = bY + dir;
+                                    if (bY2 >= 0 && bY2 < height && (grid[c][bY2] === 0 || isWater(grid[c][bY2]))) {
+                                        grid[c][bY2] = 5; // move metal down
+                                        grid[c][bY] = 15;
+                                        grid[c][rowScan] = 0;
+                                    } else {
+                                        // Try to bend sideways down
+                                        let bendDir = Math.random() < 0.5 ? 1 : -1;
+                                        let bx = c + bendDir;
+                                        if (bx >= 0 && bx < width && (grid[bx][bY] === 0 || isWater(grid[bx][bY]))) {
+                                            grid[bx][bY] = 5; // push metal diagonal
+                                            grid[c][bY] = 15; // steel moves down
+                                            grid[c][rowScan] = 0;
+                                        } else {
+                                            grid[c][rowScan] = 15; // lose velocity if stuck
+                                        }
+                                    }
+                                } else {
+                                    grid[c][rowScan] = 15; // rest on metal
+                                }
+                            } else if (beneathEntity === 122) { // Hit obsidian
+                                grid[c][bY] = 15;
+                                grid[c][rowScan] = 0;
+                            } else if (beneathEntity >= 153 && beneathEntity <= 155) { // Hit glass
+                                grid[c][bY] = beneathEntity + 6; // shatter glass into shards
+                                grid[c][rowScan] = 15; // steel resets velocity and breaks it
+                            } else {
+                                grid[c][rowScan] = 15; // hit something else solid
+                            }
+                        } else {
+                            grid[c][rowScan] = 15; // hit map boundary
+                        }
+                    } else if (activeBlockEntityState >= 116 && activeBlockEntityState <= 117) { // Acid physics
+                        let bY = rowScan + dir;
+                        if (bY < 0 || bY >= height) return;
+
+                        let beneathEntity = grid[c][bY];
+                        let bLeftX = c - 1;
+                        let bRightX = c + 1;
+                        let beneathLeftEntity = (bLeftX >= 0 && bLeftX < width) ? grid[bLeftX][bY] : 5;
+                        let beneathRightEntity = (bRightX >= 0 && bRightX < width) ? grid[bRightX][bY] : 5;
+
+                        // Acid dissolves things!
+                        let dissolved = false;
+                        let dissolveTargets = [
+                            [c, bY], [bLeftX, bY], [bRightX, bY],
+                            [bLeftX, rowScan], [bRightX, rowScan],
+                            [c, rowScan - dir] // above
+                        ];
+
+                        for (let t of dissolveTargets) {
+                            let tx = t[0];
+                            let ty = t[1];
+                            if (tx >= 0 && tx < width && ty >= 0 && ty < height) {
+                                let tEnt = grid[tx][ty];
+                                // Acid dissolves everything except acid itself
+                                if (tEnt > 0 && tEnt !== 116 && tEnt !== 117) {
+                                    let chance = 0.05; // Base dissolve rate
+                                    if (tEnt >= 6 && tEnt <= 9) chance = 0.5; // dissolves water fast
+                                    if ((tEnt >= 1 && tEnt <= 4) || (tEnt >= 10 && tEnt <= 13)) chance = 0.2; // dissolves sand
+                                    if (tEnt === 14) chance = 0.05; // dissolves stone slowly
+                                    if (tEnt >= 15 && tEnt <= 115) chance = 0.02; // dissolves steel very slowly
+                                    if (tEnt === 5) chance = 0.005; // dissolves metal extremely slowly
+                                    if (tEnt === 122) chance = 0.0; // cannot dissolve obsidian
+
+                                    if (Math.random() < chance) {
+                                        grid[tx][ty] = 0; // Destroy the target
+                                        dissolved = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (dissolved) {
+                            // Acid sometimes consumes itself when it dissolves something
+                            if (Math.random() < 0.2) {
+                                grid[c][rowScan] = 0;
+                                return; // We died
+                            }
+                        }
+
+                        // Now do liquid flow physics
+                        if (beneathEntity === 0) {
+                            grid[c][bY] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else if (beneathLeftEntity === 0 && beneathRightEntity === 0) {
+                            if (Math.random() < 0.5) {
+                                grid[bLeftX][bY] = activeBlockEntityState;
+                            } else {
+                                grid[bRightX][bY] = activeBlockEntityState;
+                            }
+                            grid[c][rowScan] = 0;
+                        } else if (beneathLeftEntity === 0) {
+                            grid[bLeftX][bY] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else if (beneathRightEntity === 0) {
+                            grid[bRightX][bY] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else {
+                            // Viscous horizontal flow
+                            let dispersionRate = 5; // flows slower than water (20)
+                            let searchLeft = 0;
+                            let searchRight = 0;
+
+                            for (let i = 1; i <= dispersionRate; i++) {
+                                let lx = c - i;
+                                if (lx >= 0 && lx < width && grid[lx][rowScan] === 0) {
+                                    searchLeft = i;
+                                    if (grid[lx][bY] === 0) break;
+                                } else { break; }
+                            }
+                            for (let i = 1; i <= dispersionRate; i++) {
+                                let rx = c + i;
+                                if (rx >= 0 && rx < width && grid[rx][rowScan] === 0) {
+                                    searchRight = i;
+                                    if (grid[rx][bY] === 0) break;
+                                } else { break; }
+                            }
+
+                            if (searchLeft > 0 && searchRight > 0) {
+                                let isLeft = Math.random() < 0.5;
+                                let moveDist = isLeft ? searchLeft : searchRight;
+                                grid[c + (isLeft ? -1 : 1) * moveDist][rowScan] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (searchLeft > 0) {
+                                grid[c - searchLeft][rowScan] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (searchRight > 0) {
+                                grid[c + searchRight][rowScan] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            }
+                        }
+                    } else if (activeBlockEntityState >= 182 && activeBlockEntityState <= 185) { // Molten Metal physics
+                        // Slowly cools and solidifies into steel over time
+                        if (Math.random() < 0.003) {
+                            grid[c][rowScan] = 15; // Becomes steel powder (lowest velocity)
+                            return;
+                        }
+
+                        // Touching water vaporizes the water and rapidly solidifies the metal
+                        let touchWaterMM = false;
+                        for (let i = -1; i <= 1; i++) {
+                            for (let j = -1; j <= 1; j++) {
+                                if (i === 0 && j === 0) continue;
+                                let cx = c + i; let cy = rowScan + j;
+                                if (cx >= 0 && cx < width && cy >= 0 && cy < height) {
+                                    let nVal = grid[cx][cy];
+                                    if (nVal >= 6 && nVal <= 9) {
+                                        touchWaterMM = true;
+                                        grid[cx][cy] = Math.floor(Math.random() * 4) + 256; // Vaporize water to steam
+                                    } else if (nVal >= 165 && nVal <= 167) {
+                                        touchWaterMM = true;
+                                        grid[cx][cy] = 0; // Vaporize nitrogen
+                                    }
+                                }
+                            }
+                        }
+                        if (touchWaterMM) {
+                            grid[c][rowScan] = 15; // Rapidly solidifies to steel on contact with water
+                            return;
+                        }
+
+                        let bY_mm = rowScan + dir;
+                        if (bY_mm < 0 || bY_mm >= height) return;
+
+                        let beneathMM = grid[c][bY_mm];
+                        let bLeftX_mm = c - 1;
+                        let bRightX_mm = c + 1;
+                        let beneathLeftMM = (bLeftX_mm >= 0 && bLeftX_mm < width) ? grid[bLeftX_mm][bY_mm] : 5;
+                        let beneathRightMM = (bRightX_mm >= 0 && bRightX_mm < width) ? grid[bRightX_mm][bY_mm] : 5;
+
+                        // Viscous flow (similar to lava)
+                        if (beneathMM === 0) {
+                            grid[c][bY_mm] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else if (beneathLeftMM === 0 && beneathRightMM === 0) {
+                            if (Math.random() < 0.5) { grid[bLeftX_mm][bY_mm] = activeBlockEntityState; }
+                            else { grid[bRightX_mm][bY_mm] = activeBlockEntityState; }
+                            grid[c][rowScan] = 0;
+                        } else if (beneathLeftMM === 0) {
+                            grid[bLeftX_mm][bY_mm] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else if (beneathRightMM === 0) {
+                            grid[bRightX_mm][bY_mm] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else {
+                            let dispersionRateMM = 6;
+                            let searchLeftMM = 0; let searchRightMM = 0;
+                            for (let i = 1; i <= dispersionRateMM; i++) {
+                                let lx = c - i;
+                                if (lx >= 0 && lx < width && grid[lx][rowScan] === 0) {
+                                    searchLeftMM = i; if (grid[lx][bY_mm] === 0) break;
+                                } else { break; }
+                            }
+                            for (let i = 1; i <= dispersionRateMM; i++) {
+                                let rx = c + i;
+                                if (rx >= 0 && rx < width && grid[rx][rowScan] === 0) {
+                                    searchRightMM = i; if (grid[rx][bY_mm] === 0) break;
+                                } else { break; }
+                            }
+                            if (searchLeftMM > 0 && searchRightMM > 0) {
+                                let isLeft = Math.random() < 0.5;
+                                grid[c + (isLeft ? -1 : 1) * (isLeft ? searchLeftMM : searchRightMM)][rowScan] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (searchLeftMM > 0) {
+                                grid[c - searchLeftMM][rowScan] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (searchRightMM > 0) {
+                                grid[c + searchRightMM][rowScan] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            }
+                        }
+                    } else if (activeBlockEntityState >= 118 && activeBlockEntityState <= 121) { // Lava physics
+                        // Lava contact-melts stone and metal
+                        for (let i = -1; i <= 1; i++) {
+                            for (let j = -1; j <= 1; j++) {
+                                if (i === 0 && j === 0) continue;
+                                let nx = c + i; let ny = rowScan + j;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    let nv = grid[nx][ny];
+                                    if (nv === 14 && Math.random() < 0.002) {
+                                        grid[nx][ny] = Math.floor(Math.random() * 4) + 118; // Stone -> Lava
+                                    } else if ((nv === 5 || (nv >= 15 && nv <= 115)) && Math.random() < 0.001) {
+                                        grid[nx][ny] = Math.floor(Math.random() * 4) + 182; // Metal/Steel -> Molten Metal
+                                    }
+                                }
+                            }
+                        }
+
+                        // Turns to stone over time
+                        if (Math.random() < 0.005) {
+                            grid[c][rowScan] = 14;
+                            return;
+                        }
+
+                        // Verify water touches
+                        let touchWater = false;
+                        for (let i = -1; i <= 1; i++) {
+                            for (let j = -1; j <= 1; j++) {
+                                if (i === 0 && j === 0) continue;
+                                let cx = c + i;
+                                let cy = rowScan + j;
+                                if (cx >= 0 && cx < width && cy >= 0 && cy < height) {
+                                    let nVal = grid[cx][cy];
+                                    if (nVal >= 6 && nVal <= 9) { // Water
+                                        touchWater = true;
+                                        grid[cx][cy] = Math.floor(Math.random() * 4) + 256; // Vaporize water to steam
+                                    } else if (nVal >= 165 && nVal <= 167) { // Nitrogen
+                                        touchWater = true;
+                                        grid[cx][cy] = 0; // Vaporize Nitrogen
+                                    }
+                                }
+                            }
+                        }
+                        if (touchWater) {
+                            grid[c][rowScan] = 122; // Turn to obsidian
+                            return;
+                        }
+
+                        let bY = rowScan + dir;
+                        if (bY < 0 || bY >= height) {
+                            grid[c][rowScan] = 14; // Solidify into stone at the bottom of the simulation area like steel
+                            return;
+                        }
+
+                        let beneathEntity = grid[c][bY];
+                        let bLeftX = c - 1;
+                        let bRightX = c + 1;
+                        let beneathLeftEntity = (bLeftX >= 0 && bLeftX < width) ? grid[bLeftX][bY] : 5;
+                        let beneathRightEntity = (bRightX >= 0 && bRightX < width) ? grid[bRightX][bY] : 5;
+
+                        // Viscous flow
+                        if (beneathEntity === 0) {
+                            grid[c][bY] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else if (beneathLeftEntity === 0 && beneathRightEntity === 0) {
+                            if (Math.random() < 0.5) {
+                                grid[bLeftX][bY] = activeBlockEntityState;
+                            } else {
+                                grid[bRightX][bY] = activeBlockEntityState;
+                            }
+                            grid[c][rowScan] = 0;
+                        } else if (beneathLeftEntity === 0) {
+                            grid[bLeftX][bY] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else if (beneathRightEntity === 0) {
+                            grid[bRightX][bY] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else {
+                            // Viscous horizontal flow
+                            let dispersionRate = 8; // Flows slower than water
+                            let searchLeft = 0;
+                            let searchRight = 0;
+
+                            for (let i = 1; i <= dispersionRate; i++) {
+                                let lx = c - i;
+                                if (lx >= 0 && lx < width && grid[lx][rowScan] === 0) {
+                                    searchLeft = i;
+                                    if (grid[lx][bY] === 0) break;
+                                } else { break; }
+                            }
+                            for (let i = 1; i <= dispersionRate; i++) {
+                                let rx = c + i;
+                                if (rx >= 0 && rx < width && grid[rx][rowScan] === 0) {
+                                    searchRight = i;
+                                    if (grid[rx][bY] === 0) break;
+                                } else { break; }
+                            }
+
+                            if (searchLeft > 0 && searchRight > 0) {
+                                let isLeft = Math.random() < 0.5;
+                                let moveDist = isLeft ? searchLeft : searchRight;
+                                grid[c + (isLeft ? -1 : 1) * moveDist][rowScan] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (searchLeft > 0) {
+                                grid[c - searchLeft][rowScan] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (searchRight > 0) {
+                                grid[c + searchRight][rowScan] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            }
+                        }
+                    } else if (activeBlockEntityState >= 150 && activeBlockEntityState <= 152) { // Lightning bolt physics
+
+                        // Extremely fast downward zigzag movement
+                        let bY = rowScan;
+                        let cx = c;
+
+                        // Age lightning very fast
+                        grid[c][rowScan] = activeBlockEntityState + 1; // ages 150 -> 151 -> 152
+                        if (activeBlockEntityState === 152) {
+                            grid[c][rowScan] = 0; // Destroy lightning tail quickly
+                            return;
+                        }
+
+                        // Strike downwards rapidly up to 10 blocks a frame
+                        for (let step = 0; step < 10; step++) {
+                            bY += dir;
+                            cx += (Math.random() < 0.5 ? -1 : 1) * Math.floor(Math.random() * 3); // erratic X jitter
+
+                            if (cx < 0 || cx >= width || bY < 0 || bY >= height) break;
+
+                            let tEnt = grid[cx][bY];
+
+                            if (tEnt === 0) {
+                                grid[cx][bY] = 150; // spawn new lightning head
+                                grid[cx][bY - dir] = 151; // trail
+                            } else if (tEnt === 5 || tEnt === 122) { // hits metal or obsidian, deflects randomly
+                                cx += (Math.random() < 0.5 ? 2 : -2);
+                            } else if ((tEnt >= 1 && tEnt <= 4) || (tEnt >= 10 && tEnt <= 13)) {
+                                // Lightening hits sand, turns it into Glass!
+                                let blastSize = 3;
+                                for (let i = -blastSize; i <= blastSize; i++) {
+                                    for (let j = -blastSize; j <= blastSize; j++) {
+                                        if (i * i + j * j <= blastSize * blastSize) {
+                                            if (cx + i >= 0 && cx + i < width && bY + j >= 0 && bY + j < height) {
+                                                let target = grid[cx + i][bY + j];
+                                                if ((target >= 1 && target <= 4) || (target >= 10 && target <= 13)) {
+                                                    grid[cx + i][bY + j] = Math.floor(Math.random() * 3) + 153; // Become Glass
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                break; // explosion stops the bolt path
+                            } else if (tEnt >= 6 && tEnt <= 9) {
+                                // Vaporizes water
+                                grid[cx][bY] = 0;
+                            } else if (tEnt >= 172 && tEnt <= 174) {
+                                // Lightning hits wood, it catches fire!
+                                grid[cx][bY] = Math.floor(Math.random() * 3) + 175;
+                            } else if (tEnt >= 186 && tEnt <= 188) {
+                                // Lightning hits thermite, it ignites!
+                                grid[cx][bY] = 189 + 2 * 4 + Math.floor(Math.random() * 4); // Normal tier ignition
+                            }
+                        }
+
+                    } else if (activeBlockEntityState >= 153 && activeBlockEntityState <= 155) { // Solid Glass (Stone-like behavior)
+                        let bY = rowScan + dir;
+                        if (bY >= 0 && bY < height) {
+                            let beneathEntity = grid[c][bY];
+                            if (isLiquidOrEmpty(beneathEntity)) {
+                                grid[c][bY] = activeBlockEntityState + 3; // become Falling Glass (156-158)
+                                grid[c][rowScan] = 0;
+                            }
+                        }
+                    } else if (activeBlockEntityState >= 156 && activeBlockEntityState <= 158) { // Falling Glass (Low Velocity)
+                        let bY = rowScan + dir;
+                        if (bY >= 0 && bY < height) {
+                            let beneathEntity = grid[c][bY];
+                            if (beneathEntity === 0 || (beneathEntity >= 6 && beneathEntity <= 9)) {
+                                // Acceleration to high velocity (lower chance = higher fall required)
+                                let nextState = (Math.random() < 0.04) ? activeBlockEntityState + 89 : activeBlockEntityState; // 156 + 89 = 245 (Fast Glass)
+                                grid[c][bY] = nextState;
+                                grid[c][rowScan] = beneathEntity === 0 ? 0 : beneathEntity;
+                            } else if (beneathEntity >= 156 && beneathEntity <= 158) {
+                                // Stack smoothly if low velocity
+                            } else {
+                                // Low velocity impact - just settle as Solid Glass
+                                grid[c][rowScan] = activeBlockEntityState - 3; // 156-3 = 153 (Solid)
+                            }
+                        } else {
+                            grid[c][rowScan] = activeBlockEntityState - 3; // settle at boundary
+                        }
+                    } else if (activeBlockEntityState >= 245 && activeBlockEntityState <= 247) { // Falling Glass (High Velocity)
+                        let bY = rowScan + dir;
+                        if (bY >= 0 && bY < height) {
+                            let beneathEntity = grid[c][bY];
+                            if (beneathEntity === 0 || (beneathEntity >= 6 && beneathEntity <= 9)) {
+                                grid[c][bY] = activeBlockEntityState;
+                                grid[c][rowScan] = beneathEntity === 0 ? 0 : beneathEntity;
+                            } else {
+                                // High velocity impact - SHATTER!
+                                grid[c][rowScan] = activeBlockEntityState - 86; // 245 - 86 = 159 (Shards)
+                            }
+                        } else {
+                            grid[c][rowScan] = activeBlockEntityState - 86; // hit boundary, shatter
+                        }
+                    } else if (activeBlockEntityState >= 159 && activeBlockEntityState <= 161) { // Glass Shards
+                        // behaves identically to sand
+                        let bY = rowScan + dir;
+                        if (bY < 0 || bY >= height) return;
+
+                        let beneathEntity = grid[c][bY];
+                        let bLeftX = c - 1;
+                        let bRightX = c + 1;
+                        let beneathLeftEntity = (bLeftX >= 0 && bLeftX < width) ? grid[bLeftX][bY] : 5;
+                        let beneathRightEntity = (bRightX >= 0 && bRightX < width) ? grid[bRightX][bY] : 5;
+
+                        if (beneathEntity === 0 || (beneathEntity >= 6 && beneathEntity <= 9)) {
+                            grid[c][bY] = activeBlockEntityState;
+                            grid[c][rowScan] = beneathEntity;
+                        } else if (beneathLeftEntity === 0 || (beneathLeftEntity >= 6 && beneathLeftEntity <= 9)) {
+                            grid[bLeftX][bY] = activeBlockEntityState;
+                            grid[c][rowScan] = beneathLeftEntity;
+                        } else if (beneathRightEntity === 0 || (beneathRightEntity >= 6 && beneathRightEntity <= 9)) {
+                            grid[bRightX][bY] = activeBlockEntityState;
+                            grid[c][rowScan] = beneathRightEntity;
+                        }
+                    } else if (activeBlockEntityState >= 168 && activeBlockEntityState <= 171) { // Fire physics
+                        // Check for nearby wood fuel or thermite fuel
+                        let hasWoodFuel = false;
+                        for (let i = -2; i <= 2 && !hasWoodFuel; i++) {
+                            for (let j = -2; j <= 2 && !hasWoodFuel; j++) {
+                                if (i === 0 && j === 0) continue;
+                                let nx = c + i; let ny = rowScan + j;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    let v = grid[nx][ny];
+                                    if ((v >= 172 && v <= 177) || (v >= 186 && v <= 212)) hasWoodFuel = true;
+                                }
+                            }
+                        }
+                        // Without fuel, fire dies out very quickly; with fuel it persists
+                        let burnOutChance = hasWoodFuel ? 0.04 : 0.35;
+                        if (Math.random() < burnOutChance) {
+                            grid[c][rowScan] = 0;
+                            return;
+                        }
+
+                        // Interact with Ice and Water
+                        let hitWater = false;
+                        for (let i = -1; i <= 1; i++) {
+                            for (let j = -1; j <= 1; j++) {
+                                if (i === 0 && j === 0) continue;
+                                let nx = c + i; let ny = rowScan + j;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    let v = grid[nx][ny];
+                                    if (v >= 162 && v <= 164) { // touches Ice
+                                        grid[nx][ny] = Math.floor(Math.random() * 4) + 6; // Melt ICE to WATER
+                                        hitWater = true; // Dies after melting
+                                    } else if (v >= 6 && v <= 9) { // touches Water
+                                        grid[nx][ny] = Math.floor(Math.random() * 4) + 256; // steam
+                                        hitWater = true; // Dies completely
+                                    } else if (v >= 165 && v <= 167) { // touches Nitrogen
+                                        hitWater = true;
+                                    }
+                                }
+                            }
+                        }
+                        if (hitWater) {
+                            grid[c][rowScan] = 0; // Fire dies
+                            return;
+                        }
+
+                        let bY = rowScan + dir;
+                        if (bY >= 0 && bY < height) {
+                            let beneathEntity = grid[c][bY];
+                            let bLeftX = c - 1;
+                            let bRightX = c + 1;
+                            let beneathLeftEntity = (bLeftX >= 0 && bLeftX < width) ? grid[bLeftX][bY] : 5;
+                            let beneathRightEntity = (bRightX >= 0 && bRightX < width) ? grid[bRightX][bY] : 5;
+
+                            if (beneathEntity === 0) {
+                                grid[c][bY] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (beneathLeftEntity === 0 && beneathRightEntity === 0) {
+                                if (Math.random() < 0.5) {
+                                    grid[bLeftX][bY] = activeBlockEntityState;
+                                } else {
+                                    grid[bRightX][bY] = activeBlockEntityState;
+                                }
+                                grid[c][rowScan] = 0;
+                            } else if (beneathLeftEntity === 0) {
+                                grid[bLeftX][bY] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (beneathRightEntity === 0) {
+                                grid[bRightX][bY] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            }
+                        } else {
+                            grid[c][rowScan] = 0; // Burn out at map edge
+                        }
+                    } else if (activeBlockEntityState >= 178 && activeBlockEntityState <= 181) { // User-placed fire (temperature-controlled)
+                        // Dies without nearby wood fuel or thermite (slower fade so it's usable)
+                        let hasWoodFuelU = false;
+                        for (let i = -3; i <= 3 && !hasWoodFuelU; i++) {
+                            for (let j = -3; j <= 3 && !hasWoodFuelU; j++) {
+                                if (i === 0 && j === 0) continue;
+                                let nx = c + i; let ny = rowScan + j;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    let v = grid[nx][ny];
+                                    if ((v >= 172 && v <= 177) || (v >= 186 && v <= 212)) hasWoodFuelU = true;
+                                }
+                            }
+                        }
+                        // With wood/thermite fuel: very persistent; without: fades over a few seconds
+                        let burnOutChance = hasWoodFuelU ? 0.02 : 0.10;
+                        if (Math.random() < burnOutChance) {
+                            grid[c][rowScan] = 0;
+                            return;
+                        }
+
+                        // Interact with Ice and Water
+                        let hitWaterU = false; // Renamed to hitWaterU for user fire
+                        for (let i = -1; i <= 1; i++) {
+                            for (let j = -1; j <= 1; j++) {
+                                if (i === 0 && j === 0) continue;
+                                let nx = c + i; let ny = rowScan + j;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    let v = grid[nx][ny];
+                                    if (v >= 162 && v <= 164) { // touches Ice
+                                        grid[nx][ny] = Math.floor(Math.random() * 4) + 6; // Melt ICE to WATER
+                                        hitWaterU = true; // Dies after melting
+                                    } else if (v >= 6 && v <= 9) { // touches Water
+                                        grid[nx][ny] = Math.floor(Math.random() * 4) + 256; // steam
+                                        hitWaterU = true; // Dies completely
+                                    } else if (v >= 165 && v <= 167) { // touches Nitrogen
+                                        hitWaterU = true;
+                                    }
+                                }
+                            }
+                        }
+                        if (hitWaterU) { grid[c][rowScan] = 0; return; }
+
+                        // Temperature-based material melting — continuously scales with heat
+                        // Each material has: minTemp (ignition point), maxTemp (full melt), minRate, maxRate
+                        {
+                            // Linear interpolation helper: t=0 → from, t=1 → to, clamped
+                            const scaleMelt = (temp, minT, maxT, minR, maxR) => {
+                                if (temp < minT) return 0;            // Too cold — immune
+                                if (temp >= maxT) return maxR;        // Max heat — peak melt
+                                const t = (temp - minT) / (maxT - minT);
+                                return minR + t * (maxR - minR);      // Smooth linear ramp
+                            };
+
+                            let burnDirs = [[0, dir], [0, -dir], [-1, 0], [1, 0], [-1, dir], [1, dir]];
+                            for (let d of burnDirs) {
+                                let bx = c + d[0]; let by = rowScan + d[1];
+                                if (bx < 0 || bx >= width || by < 0 || by >= height) continue;
+                                let bv = grid[bx][by];
+                                let meltChance = 0;
+
+                                //  Material        minTemp  maxTemp  minRate  maxRate
+                                if ((bv >= 1 && bv <= 4) || (bv >= 10 && bv <= 13)) {
+                                    // Sand / wet sand — melts at any heat, very fast at plasma
+                                    meltChance = scaleMelt(currentFireTemp, 0, 100, 0.003, 0.25);
+                                } else if (bv === 14) {
+                                    // Stone — melts into lava when hot enough
+                                    meltChance = scaleMelt(currentFireTemp, 50, 95, 0.001, 0.12);
+                                } else if ((bv >= 153 && bv <= 161) || (bv >= 245 && bv <= 247)) {
+                                    // Glass (solid / falling / shards / HV)
+                                    meltChance = scaleMelt(currentFireTemp, 62, 95, 0.001, 0.14);
+                                } else if (bv === 122) {
+                                    // Obsidian — only plasma can crack it
+                                    meltChance = scaleMelt(currentFireTemp, 80, 100, 0.001, 0.06);
+                                } else if (bv === 5) {
+                                    // Metal bar — high heat required, melts into molten metal
+                                    meltChance = scaleMelt(currentFireTemp, 83, 100, 0.001, 0.08);
+                                } else if (bv >= 15 && bv <= 115) {
+                                    // Steel powder — plasma only, melts into molten metal faster
+                                    meltChance = scaleMelt(currentFireTemp, 82, 100, 0.002, 0.10);
+                                } else if (bv >= 186 && bv <= 188) {
+                                    // Thermite (unlit) — ignites readily from user fire
+                                    meltChance = scaleMelt(currentFireTemp, 5, 100, 0.02, 0.5);
+                                }
+
+                                if (meltChance > 0 && Math.random() < meltChance) {
+                                    if (bv === 14) {
+                                        grid[bx][by] = Math.floor(Math.random() * 4) + 118; // Stone -> Lava
+                                    } else if (bv === 5 || (bv >= 15 && bv <= 115)) {
+                                        grid[bx][by] = Math.floor(Math.random() * 4) + 182; // Metal/Steel -> Molten Metal
+                                    } else if (bv >= 186 && bv <= 188) {
+                                        // Thermite ignites at the current fire temp tier
+                                        const t = currentFireTemp;
+                                        const tier = t < 15 ? 0 : t < 30 ? 1 : t < 50 ? 2 : t < 65 ? 3 : t < 80 ? 4 : 5;
+                                        grid[bx][by] = 189 + tier * 4 + Math.floor(Math.random() * 4); // Burning Thermite at correct tier
+                                    } else if (bv === 122) {
+                                        grid[bx][by] = 118 + Math.floor(Math.random() * 4); // Obsidian -> Lava
+                                    } else if ((bv >= 153 && bv <= 161) || (bv >= 245 && bv <= 247)) {
+                                        grid[bx][by] = 237 + Math.floor(Math.random() * 4); // Glass -> Melted Sand
+                                    } else if ((bv >= 1 && bv <= 4) || (bv >= 10 && bv <= 13)) {
+                                        grid[bx][by] = 237 + Math.floor(Math.random() * 4); // Sand -> Melted Sand
+                                    } else {
+                                        grid[bx][by] = 0; // Everything else vaporizes
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        let bY = rowScan + dir;
+                        if (bY >= 0 && bY < height) {
+                            let beneathEntity = grid[c][bY];
+                            let bLeftX = c - 1;
+                            let bRightX = c + 1;
+                            let beneathLeftEntity = (bLeftX >= 0 && bLeftX < width) ? grid[bLeftX][bY] : 5;
+                            let beneathRightEntity = (bRightX >= 0 && bRightX < width) ? grid[bRightX][bY] : 5;
+
+                            if (beneathEntity === 0) {
+                                grid[c][bY] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (beneathLeftEntity === 0 && beneathRightEntity === 0) {
+                                if (Math.random() < 0.5) {
+                                    grid[bLeftX][bY] = activeBlockEntityState;
+                                } else {
+                                    grid[bRightX][bY] = activeBlockEntityState;
+                                }
+                                grid[c][rowScan] = 0;
+                            } else if (beneathLeftEntity === 0) {
+                                grid[bLeftX][bY] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (beneathRightEntity === 0) {
+                                grid[bRightX][bY] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            }
+                        } else {
+                            grid[c][rowScan] = 0; // Burn out at map edge
+                        }
+                    } else if (activeBlockEntityState >= 213 && activeBlockEntityState <= 236) { // Thermite fire particles — tier-locked color, float upward
+                        // Die on water/nitrogen/ice contact
+                        let hitWaterF = false;
+                        for (let i = -1; i <= 1; i++) {
+                            for (let j = -1; j <= 1; j++) {
+                                if (i === 0 && j === 0) continue;
+                                let nx = c + i; let ny = rowScan + j;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    if ((nv >= 6 && nv <= 9) || (nv >= 162 && nv <= 167)) {
+                                        hitWaterF = true;
+                                        if (nv >= 6 && nv <= 9) grid[nx][ny] = Math.floor(Math.random() * 4) + 256; // steam
+                                    }
+                                }
+                            }
+                        }
+                        if (hitWaterF) { grid[c][rowScan] = 0; return; }
+
+                        // Check for nearby fuel to determine burnout rate
+                        let hasFuelT = false;
+                        for (let i = -2; i <= 2 && !hasFuelT; i++) {
+                            for (let j = -2; j <= 2 && !hasFuelT; j++) {
+                                if (i === 0 && j === 0) continue;
+                                let nx = c + i; let ny = rowScan + j;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    let v = grid[nx][ny];
+                                    if ((v >= 172 && v <= 177) || (v >= 186 && v <= 212)) hasFuelT = true;
+                                }
+                            }
+                        }
+                        // Without fuel, fire dies out EXTREMELY quickly to avoid "floating chunks" look
+                        let burnRate = hasFuelT ? 0.05 : 0.65;
+                        if (Math.random() < burnRate) { grid[c][rowScan] = 0; return; }
+
+                        // Rise upward (opposite of gravity direction) like fire
+                        let fBY = rowScan + dir; // dir is already the inverse because fire uses !isFireInverted
+                        if (fBY >= 0 && fBY < height) {
+                            let fBelow = grid[c][fBY];
+                            let fLeftX = c - 1;
+                            let fRightX = c + 1;
+                            let fBelowLeft = (fLeftX >= 0 && fLeftX < width) ? grid[fLeftX][fBY] : 5;
+                            let fBelowRight = (fRightX >= 0 && fRightX < width) ? grid[fRightX][fBY] : 5;
+                            if (fBelow === 0) {
+                                grid[c][fBY] = activeBlockEntityState; grid[c][rowScan] = 0;
+                            } else if (fBelowLeft === 0 && fBelowRight === 0) {
+                                grid[Math.random() < 0.5 ? fLeftX : fRightX][fBY] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (fBelowLeft === 0) {
+                                grid[fLeftX][fBY] = activeBlockEntityState; grid[c][rowScan] = 0;
+                            } else if (fBelowRight === 0) {
+                                grid[fRightX][fBY] = activeBlockEntityState; grid[c][rowScan] = 0;
+                            }
+                        } else {
+                            grid[c][rowScan] = 0; // Escaped map edge
+                        }
+
+                    } else if (activeBlockEntityState >= 237 && activeBlockEntityState <= 240) { // Melted Sand physics
+                        // Slowly cools and solidifies into glass over time
+                        if (Math.random() < 0.004) {
+                            grid[c][rowScan] = Math.floor(Math.random() * 3) + 153; // Becomes Glass solid
+                            return;
+                        }
+
+                        // Touching water vaporizes water and solidifies sand
+                        let touchWaterMS = false;
+                        for (let i = -1; i <= 1; i++) {
+                            for (let j = -1; j <= 1; j++) {
+                                if (i === 0 && j === 0) continue;
+                                let cx = c + i; let cy = rowScan + j;
+                                if (cx >= 0 && cx < width && cy >= 0 && cy < height) {
+                                    let nVal = grid[cx][cy];
+                                    if (nVal >= 6 && nVal <= 9) { touchWaterMS = true; grid[cx][cy] = Math.floor(Math.random() * 4) + 256; }
+                                }
+                            }
+                        }
+                        if (touchWaterMS) {
+                            grid[c][rowScan] = Math.floor(Math.random() * 3) + 153; // Solidifies to glass
+                            return;
+                        }
+
+                        let bY_ms = rowScan + dir;
+                        if (bY_ms < 0 || bY_ms >= height) return;
+
+                        let beneathMS = grid[c][bY_ms];
+                        let bLeftX_ms = c - 1;
+                        let bRightX_ms = c + 1;
+                        let beneathLeftMS = (bLeftX_ms >= 0 && bLeftX_ms < width) ? grid[bLeftX_ms][bY_ms] : 5;
+                        let beneathRightMS = (bRightX_ms >= 0 && bRightX_ms < width) ? grid[bRightX_ms][bY_ms] : 5;
+
+                        // Viscous flow (similar to lava/molten metal)
+                        if (beneathMS === 0) {
+                            grid[c][bY_ms] = activeBlockEntityState; grid[c][rowScan] = 0;
+                        } else if (beneathLeftMS === 0 && beneathRightMS === 0) {
+                            if (Math.random() < 0.5) grid[bLeftX_ms][bY_ms] = activeBlockEntityState; else grid[bRightX_ms][bY_ms] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else if (beneathLeftMS === 0) {
+                            grid[bLeftX_ms][bY_ms] = activeBlockEntityState; grid[c][rowScan] = 0;
+                        } else if (beneathRightMS === 0) {
+                            grid[bRightX_ms][bY_ms] = activeBlockEntityState; grid[c][rowScan] = 0;
+                        } else {
+                            let dispersionRateMS = 10;
+                            let searchLeftMS = 0; let searchRightMS = 0;
+                            for (let i = 1; i <= dispersionRateMS; i++) {
+                                let lx = c - i; if (lx >= 0 && lx < width && grid[lx][rowScan] === 0) { searchLeftMS = i; if (grid[lx][bY_ms] === 0) break; } else break;
+                            }
+                            for (let i = 1; i <= dispersionRateMS; i++) {
+                                let rx = c + i; if (rx >= 0 && rx < width && grid[rx][rowScan] === 0) { searchRightMS = i; if (grid[rx][bY_ms] === 0) break; } else break;
+                            }
+                            if (searchLeftMS > 0 && searchRightMS > 0) {
+                                let isLeft = Math.random() < 0.5;
+                                grid[c + (isLeft ? -1 : 1) * (isLeft ? searchLeftMS : searchRightMS)][rowScan] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (searchLeftMS > 0) {
+                                grid[c - searchLeftMS][rowScan] = activeBlockEntityState; grid[c][rowScan] = 0;
+                            } else if (searchRightMS > 0) {
+                                grid[c + searchRightMS][rowScan] = activeBlockEntityState; grid[c][rowScan] = 0;
+                            }
+                        }
+
+                    } else if ((activeBlockEntityState >= 6 && activeBlockEntityState <= 9) || (activeBlockEntityState >= 165 && activeBlockEntityState <= 167)) { // Water & Nitrogen physics
+                        if (activeBlockEntityState >= 165 && activeBlockEntityState <= 167) {
+                            // Turn nearby water into ice
+                            for (let i = -1; i <= 1; i++) {
+                                for (let j = -1; j <= 1; j++) {
+                                    if (i === 0 && j === 0) continue;
+                                    let nx = c + i; let ny = rowScan + j;
+                                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                        if (isWater(grid[nx][ny])) {
+                                            grid[nx][ny] = Math.floor(Math.random() * 3) + 162; // Turn water to ice
+                                        }
+                                    }
+                                }
+                            }
+                            // Nitrogen gradually evaporates on its own
+                            if (Math.random() < 0.005) {
+                                grid[c][rowScan] = Math.floor(Math.random() * 4) + 256; // Nitrogen turns into steam (gaseous state)
+                                return;
+                            }
+                        }
+
+                        let bY = rowScan + dir;
+                        if (bY < 0 || bY >= height) return;
+
+                        let beneathEntity = grid[c][bY];
+                        let bLeftX = c - 1;
+                        let bRightX = c + 1;
+                        let beneathLeftEntity = (bLeftX >= 0 && bLeftX < width) ? grid[bLeftX][bY] : 5;
+                        let beneathRightEntity = (bRightX >= 0 && bRightX < width) ? grid[bRightX][bY] : 5;
+
+                        if (beneathEntity === 0) {
+                            grid[c][bY] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else if (beneathLeftEntity === 0 && beneathRightEntity === 0) {
+                            if (Math.random() < 0.5) {
+                                grid[bLeftX][bY] = activeBlockEntityState;
+                            } else {
+                                grid[bRightX][bY] = activeBlockEntityState;
+                            }
+                            grid[c][rowScan] = 0;
+                        } else if (beneathLeftEntity === 0) {
+                            grid[bLeftX][bY] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else if (beneathRightEntity === 0) {
+                            grid[bRightX][bY] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else {
+                            let dispersionRate = 20;
+                            let searchLeft = 0;
+                            let searchRight = 0;
+
+                            // Scan left
+                            for (let i = 1; i <= dispersionRate; i++) {
+                                let lx = c - i;
+                                if (lx >= 0 && lx < width && grid[lx][rowScan] === 0) {
+                                    searchLeft = i;
+                                    if (grid[lx][bY] === 0) break; // Hole found, stop spreading so it falls next frame
+                                } else { break; }
+                            }
+
+                            // Scan right
+                            for (let i = 1; i <= dispersionRate; i++) {
+                                let rx = c + i;
+                                if (rx >= 0 && rx < width && grid[rx][rowScan] === 0) {
+                                    searchRight = i;
+                                    if (grid[rx][bY] === 0) break; // Hole found, stop spreading so it falls next frame
+                                } else { break; }
+                            }
+
+                            if (searchLeft > 0 && searchRight > 0) {
+                                let isLeft = Math.random() < 0.5;
+                                let moveDist = isLeft ? searchLeft : searchRight;
+                                grid[c + (isLeft ? -1 : 1) * moveDist][rowScan] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (searchLeft > 0) {
+                                grid[c - searchLeft][rowScan] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            } else if (searchRight > 0) {
+                                grid[c + searchRight][rowScan] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                            }
+                        }
+                    } else if (activeBlockEntityState >= 252 && activeBlockEntityState <= 255) { // Methane Gas physics
+                        // Highly flammable!
+                        let explodeMethane = false;
+                        for (let i = -1; i <= 1; i++) {
+                            for (let j = -1; j <= 1; j++) {
+                                let nx = c + i; let ny = rowScan + j;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    let v = grid[nx][ny];
+                                    if ((v >= 168 && v <= 171) || (v >= 178 && v <= 181) || (v >= 189 && v <= 212) || (v >= 213 && v <= 236) || v === 150 || (v >= 248 && v <= 251)) explodeMethane = true;
+                                }
+                            }
+                        }
+                        if (explodeMethane) {
+                            grid[c][rowScan] = Math.floor(Math.random() * 4) + 178; // Turn to user fire
+                            return;
+                        }
+
+                        let bY = rowScan + dir; // dir is -1 (up) by default
+                        if (bY < 0 || bY >= height) return;
+
+                        // Stochastic gas jitter (Brownian motion) — makes it look diffuse
+                        if (Math.random() < 0.35) {
+                            let rdx = Math.floor(Math.random() * 3) - 1;
+                            let rdy = Math.floor(Math.random() * 3) - 1;
+                            if (rdx !== 0 || rdy !== 0) {
+                                let nx = c + rdx;
+                                let ny = rowScan + rdy;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height && grid[nx][ny] === 0) {
+                                    grid[nx][ny] = activeBlockEntityState;
+                                    grid[c][rowScan] = 0;
+                                    return; 
+                                }
+                            }
+                        }
+
+                        let beneathEntity = grid[c][bY];
+                        let bLeftX = c - 1; let bRightX = c + 1;
+                        let beneathLeftEntity = (bLeftX >= 0 && bLeftX < width) ? grid[bLeftX][bY] : 5;
+                        let beneathRightEntity = (bRightX >= 0 && bRightX < width) ? grid[bRightX][bY] : 5;
+
+                        if (beneathEntity === 0) {
+                            grid[c][bY] = activeBlockEntityState; grid[c][rowScan] = 0;
+                        } else if ((beneathEntity >= 6 && beneathEntity <= 9) || (beneathEntity >= 116 && beneathEntity <= 117) || (beneathEntity >= 118 && beneathEntity <= 121)) {
+                            // Bubble up through Water, Acid, Lava
+                            swapWithDisplacement(c, rowScan, c, bY);
+                        } else if (beneathLeftEntity === 0 || beneathRightEntity === 0) {
+                            grid[Math.random() < 0.5 ? (beneathLeftEntity === 0 ? bLeftX : bRightX) : (beneathRightEntity === 0 ? bRightX : bLeftX)][bY] = activeBlockEntityState;
+                            grid[c][rowScan] = 0;
+                        } else if ((beneathLeftEntity >= 6 && beneathLeftEntity <= 9) || (beneathLeftEntity >= 116 && beneathLeftEntity <= 117)) {
+                            // Bubble sideways/up through liquids
+                            swapWithDisplacement(c, rowScan, bLeftX, bY);
+                        } else if ((beneathRightEntity >= 6 && beneathRightEntity <= 9) || (beneathRightEntity >= 116 && beneathRightEntity <= 117)) {
+                            swapWithDisplacement(c, rowScan, bRightX, bY);
+                        } else {
+                            // Horizontal gas flow
+                            let dispersionRate = 10; // Slightly lower for more cloud-like gathering
+                            let searchLeft = 0; let searchRight = 0;
+                            for (let i = 1; i <= dispersionRate; i++) {
+                                let lx = c - i; if (lx >= 0 && lx < width && grid[lx][rowScan] === 0) { searchLeft = i; if (grid[lx][bY] === 0) break; } else break;
+                            }
+                            for (let i = 1; i <= dispersionRate; i++) {
+                                let rx = c + i; if (rx >= 0 && rx < width && grid[rx][rowScan] === 0) { searchRight = i; if (grid[rx][bY] === 0) break; } else break;
+                            }
+                            if (searchLeft > 0 || searchRight > 0) {
+                                let moveDist = (searchLeft > 0 && searchRight > 0) ? (Math.random() < 0.5 ? -searchLeft : searchRight) : (searchLeft > 0 ? -searchLeft : searchRight);
+                                grid[c + moveDist][rowScan] = activeBlockEntityState; grid[c][rowScan] = 0;
+                            }
+                        }
+                    } else if (activeBlockEntityState >= 256 && activeBlockEntityState <= 259) { // Steam physics
+                        // Steam condenses into water over time (rain effect)
+                        if (Math.random() < 0.0025) { 
+                            grid[c][rowScan] = Math.floor(Math.random() * 4) + 6; // Condense to water
+                            return; 
+                        }
+
+                        let bY = rowScan + dir; // rises
+                        if (bY < 0 || bY >= height) return;
+
+                        let beneathEntity = grid[c][bY];
+                        if (beneathEntity === 0) {
+                            grid[c][bY] = activeBlockEntityState; grid[c][rowScan] = 0;
+                        } else {
+                            // Brownian jitter for steam
+                            if (Math.random() < 0.45) {
+                                let rdx = Math.floor(Math.random() * 3) - 1;
+                                let rdy = Math.floor(Math.random() * 3) - 1;
+                                if (rdx !== 0 || rdy !== 0) {
+                                    let nx = c + rdx; let ny = rowScan + rdy;
+                                    if (nx >= 0 && nx < width && ny >= 0 && ny < height && grid[nx][ny] === 0) {
+                                        grid[nx][ny] = activeBlockEntityState; grid[c][rowScan] = 0; return;
+                                    }
+                                }
+                            }
+                            // Dispersion
+                            let searchLeft = 0; let searchRight = 0;
+                            for (let i = 1; i <= 8; i++) {
+                                let lx = c - i; if (lx >= 0 && lx < width && grid[lx][rowScan] === 0) { searchLeft = i; } else break;
+                            }
+                            for (let i = 1; i <= 8; i++) {
+                                let rx = c + i; if (rx >= 0 && rx < width && grid[rx][rowScan] === 0) { searchRight = i; } else break;
+                            }
+                            if (searchLeft > 0 || searchRight > 0) {
+                                let moveDist = (searchLeft > 0 && searchRight > 0) ? (Math.random() < 0.5 ? -searchLeft : searchRight) : (searchLeft > 0 ? -searchLeft : searchRight);
+                                grid[c + moveDist][rowScan] = activeBlockEntityState; grid[c][rowScan] = 0;
+                            }
+                        }
+                    }
+                }
+
+                const gIntensity = parseFloat(gravityIntensityDom.value);
+
+                if (gIntensity === 0) {
+                    // Zero gravity Brownian motion (floating particles)
+                    for (let rowScan = height - 2; rowScan >= 1; rowScan--) {
+                        let biasDir = Math.random() > 0.5 ? 1 : -1;
+                        let c_Begin = biasDir === 1 ? 1 : width - 2;
+                        let c_Limit = biasDir === 1 ? width - 1 : 0;
+                        for (let c = c_Begin; c !== c_Limit; c += biasDir) {
+                            let val = grid[c][rowScan];
+                            if (val !== 0 && val !== 5 && (val < 131 || val > 149)) { // Skip empty air, portals, and solid metal
+                                // 50% chance to move each frame to make it floaty
+                                if (Math.random() < 0.5) {
+                                    let dx = Math.floor(Math.random() * 3) - 1; // -1, 0, 1
+                                    let dy = Math.floor(Math.random() * 3) - 1; // -1, 0, 1
+                                    if (dx !== 0 || dy !== 0) {
+                                        let nx = c + dx;
+                                        let ny = rowScan + dy;
+                                        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                            if (grid[nx][ny] === 0) { // Only move into empty space
+                                                grid[nx][ny] = val;
+                                                grid[c][rowScan] = 0;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    let fullPasses = Math.floor(gIntensity);
+                    let partialPassProb = gIntensity - fullPasses;
+                    let totalPasses = fullPasses + (partialPassProb > 0 ? 1 : 0);
+
+                    for (let g = 0; g < totalPasses; g++) {
+                        let prob = (g < fullPasses) ? 1.0 : partialPassProb;
+
+                        let biasDir = Math.random() > 0.5 ? 1 : -1;
+                        let startX = biasDir === 1 ? 0 : width - 1;
+                        let endX = biasDir === 1 ? width : -1;
+
+                        // Pass 1: Normal aligned particles (falling downwards, process bottom-to-top)
+                        for (let y = height - 1; y >= 0; y--) {
+                            for (let x = startX; x !== endX; x += biasDir) {
+                                let val = grid[x][y];
+                                if (val !== 0 && val !== 5 && (val < 131 || val > 149)) {
+                                    if (prob >= 1.0 || Math.random() < prob) {
+                                        processCell(x, y, 1);
+                                    }
+                                }
+                            }
+                        }
+
+                        // Pass 2: Inverted particles (falling upwards, process top-to-bottom)
+                        for (let y = 0; y < height; y++) {
+                            for (let x = startX; x !== endX; x += biasDir) {
+                                let val = grid[x][y];
+                                if (val !== 0 && val !== 5 && (val < 131 || val > 149)) {
+                                    if (prob >= 1.0 || Math.random() < prob) {
+                                        processCell(x, y, -1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // STEP 2B: Wet Sand Drying Logic (BFS connected to water)
+                if (Math.random() < 0.1) {
+                    let wetSandCells = [];
+                    let queue = [];
+                    // Using parallel Uint8Array instead of boolean array of arrays speeds up performance heavily
+                    let connectedToWater = new Array(width);
+                    for (let i = 0; i < width; i++) connectedToWater[i] = new Uint8Array(height);
+
+                    for (let c = 0; c < width; c++) {
+                        for (let r = 0; r < height; r++) {
+                            let val = grid[c][r];
+                            if (val >= 10 && val <= 13) {
+                                let touchesWater = false;
+                                for (let i = -1; i <= 1; i++) {
+                                    for (let j = -1; j <= 1; j++) {
+                                        if (i === 0 && j === 0) continue;
+                                        if (c + i >= 0 && c + i < width && r + j >= 0 && r + j < height) {
+                                            let nVal = grid[c + i][r + j];
+                                            if (nVal >= 6 && nVal <= 9) {
+                                                touchesWater = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (touchesWater) break;
+                                }
+
+                                if (touchesWater) {
+                                    connectedToWater[c][r] = 1;
+                                    queue.push({ x: c, y: r });
+                                } else {
+                                    wetSandCells.push({ x: c, y: r });
+                                }
+                            }
+                        }
+                    }
+
+                    let head = 0;
+                    while (head < queue.length) {
+                        let p = queue[head++];
+                        for (let i = -1; i <= 1; i++) {
+                            for (let j = -1; j <= 1; j++) {
+                                if (i === 0 && j === 0) continue;
+                                let nx = p.x + i;
+                                let ny = p.y + j;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    let nVal = grid[nx][ny];
+                                    if ((nVal >= 10 && nVal <= 13) && connectedToWater[nx][ny] === 0) {
+                                        connectedToWater[nx][ny] = 1;
+                                        queue.push({ x: nx, y: ny });
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    for (let i = 0; i < wetSandCells.length; i++) {
+                        let p = wetSandCells[i];
+                        if (connectedToWater[p.x][p.y] === 0) {
+                            if (Math.random() < 0.05) {  // 5% chance per check (roughly 0.5% per frame overall)
+                                grid[p.x][p.y] -= 9; // Turn back into dry sand!
+                            }
+                        }
+                    }
+                }
+            }
+
+            // STEP 3: Render buffer back to HTML directly to Canvas Hardware
+            // Fastest way to paint millions of squares bypassing fillRect
+
+            // Precompute fire color palette for this frame based on temperature slider
+            // Black-body radiation: red (cold) -> orange -> yellow -> white -> blue (plasma)
+            // currentFireTemp is already declared at the top of renderFramePipeline
+            const fireTempColors = (function () {
+                // Key color stops [temp%, [R,G,B]]
+                const stops = [
+                    [0, [120, 0, 0]],  // Dying ember (very dark red)
+                    [10, [180, 20, 0]],  // Deep red
+                    [25, [220, 55, 10]],  // Red-orange
+                    [40, [249, 115, 22]],  // Orange (normal low)
+                    [52, [250, 204, 21]],  // Yellow (normal high)
+                    [62, [254, 240, 138]],  // Light yellow
+                    [73, [255, 255, 220]],  // White-yellow
+                    [83, [210, 225, 255]],  // Blue-white
+                    [92, [130, 170, 255]],  // Light blue
+                    [100, [70, 110, 255]]   // Plasma blue
+                ];
+                function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
+                function getColor(t) {
+                    for (let i = 1; i < stops.length; i++) {
+                        if (t <= stops[i][0]) {
+                            let tf = (t - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]);
+                            let A = stops[i - 1][1], B = stops[i][1];
+                            return [lerp(A[0], B[0], tf), lerp(A[1], B[1], tf), lerp(A[2], B[2], tf)];
+                        }
+                    }
+                    return stops[stops.length - 1][1];
+                }
+                // Generate 4 fire variants with slight brightness variation for flicker
+                const base = getColor(currentFireTemp); // Using currentFireTemp
+                const bright = getColor(Math.min(100, currentFireTemp + 10)); // Using currentFireTemp
+                const dim = getColor(Math.max(0, currentFireTemp - 12)); // Using currentFireTemp
+                const mid = getColor(Math.max(0, currentFireTemp - 5)); // Using currentFireTemp
+                return [base, bright, mid, dim]; // maps to fire states 168, 169, 170, 171
+            })();
+
+            const startY = height - displayHeight;
+            for (let r = 0; r < displayHeight; r++) {
+                for (let c = 0; c < displayWidth; c++) {
+                    let gridC = c;
+                    let gridR = startY + r;
+                    let materialDisplayState = 0;
+
+                    if (gridC >= 0 && gridC < width && gridR >= 0 && gridR < height) {
+                        let materialState = grid[gridC][gridR]; // 2D mode reads native 1D index
+                        if (materialState >= 15 && materialState <= 115) {
+                            materialDisplayState = 15;
+                        } else if ((materialState >= 116 && materialState <= 122) || (materialState >= 126 && materialState <= 129)) {
+                            materialDisplayState = materialState - 100; // Acid powder, acid, lava, obsidian mapping
+                        } else if (materialState >= 150 && materialState <= 161) {
+                            if (materialState <= 152) materialDisplayState = materialState - 120;
+                            else if (materialState <= 155) materialDisplayState = materialState - 120;
+                            else if (materialState <= 158) materialDisplayState = materialState - 123;
+                            else materialDisplayState = materialState - 126;
+                        } else if (materialState >= 245 && materialState <= 247) { // High Velocity Glass
+                            materialDisplayState = materialState - 212; // 245 -> 33 (Glass 1)
+                        } else if (materialState >= 162 && materialState <= 185) { // Range 162-185
+                            materialDisplayState = materialState - 126; // Ice(36)..MoltenMetal(56-59)
+                        } else if (materialState >= 186 && materialState <= 188) { // Thermite unlit
+                            materialDisplayState = materialState - 126; // 186->60, 187->61, 188->62
+                        } else if (materialState >= 189 && materialState <= 212) { // Burning Thermite blocks
+                            materialDisplayState = materialState - 126; // 189->63 .. 212->86 (tier colors)
+                        } else if (materialState >= 213 && materialState <= 236) { // Thermite fire particles
+                            materialDisplayState = materialState - 150; // 213->63 .. 236->86 (same tier colors, no new palette entries)
+                        } else if (materialState >= 237 && materialState <= 240) { // Melted Sand
+                            materialDisplayState = materialState - 150; // 237->87 .. 240->90
+                        } else if (materialState >= 241 && materialState <= 244) { // Gunpowder
+                            materialDisplayState = materialState - 150; // 241->91 .. 244->94
+                        } else if (materialState >= 248 && materialState <= 251) { // Uranium
+                            materialDisplayState = materialState - 153; // 248->95
+                        } else if (materialState >= 252 && materialState <= 259) { // Methane and Steam
+                            materialDisplayState = materialState - 153; // 252->99, 256->103
+                        } else {
+                            materialDisplayState = materialState;
+                        }
+                    }
+
+                    let rawImageOffset = (r * displayWidth + c) * 4; // Data aligns linearly by RGBA
+
+                    // User fire (178-181) gets dynamic temperature-based coloring; wood fire (168-171) always uses normal orange palette
+                    let materialState2 = (gridC >= 0 && gridC < width && gridR >= 0 && gridR < height) ? grid[gridC][gridR] : 0;
+                    if (materialState2 >= 178 && materialState2 <= 181) { // Changed check to 178-181
+                        let fireVariant = materialState2 - 178; // Changed index offset to -178
+                        let fc = fireTempColors[fireVariant];
+                        imageData.data[rawImageOffset] = fc[0];
+                        imageData.data[rawImageOffset + 1] = fc[1];
+                        imageData.data[rawImageOffset + 2] = fc[2];
+                    } else {
+                        let rbgColorDataCache = palette[materialDisplayState] || palette[0];
+                        let r = rbgColorDataCache[0];
+                        let g = rbgColorDataCache[1];
+                        let b = rbgColorDataCache[2];
+                        let a = rbgColorDataCache.length > 3 ? rbgColorDataCache[3] : 255;
+
+                        // Uranium Glow pulsing effect
+                        if (materialState2 >= 248 && materialState2 <= 251) {
+                            const glow = performance.now() / 400;
+                            const pulse = Math.sin(glow) * 0.35 + 1.1; // Pulsing brightness multiplier
+                            r = Math.min(255, r * pulse);
+                            g = Math.min(255, g * pulse);
+                            b = Math.min(255, b * pulse);
+                        }
+
+                        imageData.data[rawImageOffset] = r;
+                        imageData.data[rawImageOffset + 1] = g;
+                        imageData.data[rawImageOffset + 2] = b;
+                    }
+                    // Alpha skips intentionally handled at frame creation cycle
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+
+            // Throttle speed based on slider (0 = max speed/no delay, 100 = very slow/100ms delay)
+            const delayMs = parseInt(simSpeedDom.value);
+            if (delayMs > 0) {
+                setTimeout(() => {
+                    requestAnimationFrame(renderFramePipeline);
+                }, delayMs);
+            } else {
+                requestAnimationFrame(renderFramePipeline);
+            }
+        }
+
+        // Initialize engine start!
+        requestAnimationFrame(renderFramePipeline);
+
+    </script>
+</body>
+
+</html>
