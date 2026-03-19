@@ -1062,7 +1062,7 @@
         cheatBox.style.textAlign = 'center';
         cheatBox.style.width = '400px';
         cheatBox.style.zIndex = '999999'; // ULTRA HIGH Z-INDEX
-        cheatBox.style.display = 'none'; 
+        cheatBox.style.display = 'none';
         cheatBox.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
         cheatBox.style.boxShadow = '0 0 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(234, 179, 8, 0.4)';
         document.body.appendChild(cheatBox);
@@ -1177,7 +1177,7 @@
                         clearInterval(volcanoInterval);
                         return;
                     }
-                    
+
                     // 1. Manually PUSH existing lava UP to simulate velocity
                     const pushRadius = 25;
                     for (let x = cx - pushRadius; x <= cx + pushRadius; x++) {
@@ -1186,8 +1186,8 @@
                             let val = grid[x][y];
                             // If it's Lava or Fire, move it up!
                             if ((val >= 118 && val <= 121) || (val >= 178 && val <= 181)) {
-                                if (grid[x][y-5] === 0 || Math.random() < 0.2) {
-                                    grid[x][y-5] = val;
+                                if (grid[x][y - 5] === 0 || Math.random() < 0.2) {
+                                    grid[x][y - 5] = val;
                                     grid[x][y] = 0;
                                 }
                             }
@@ -1235,7 +1235,7 @@
                 const radius = 60;
                 for (let i = -radius; i <= radius; i++) {
                     for (let j = -radius; j <= radius; j++) {
-                        if (i*i + j*j <= radius*radius && Math.random() < 0.7) {
+                        if (i * i + j * j <= radius * radius && Math.random() < 0.7) {
                             let tx = cx + i; let ty = cy + j;
                             if (tx >= 0 && tx < width && ty >= 0 && ty < height) {
                                 grid[tx][ty] = 178 + Math.floor(Math.random() * 4); // User fire
@@ -1301,8 +1301,8 @@
             const isConsoleOpen = cheatBox.style.display === 'block';
 
             // COMPLEX COMBO TO OPEN: Ctrl + Shift + \ OR Ctrl + Alt + Enter
-            const isActivator = (e.ctrlKey && e.shiftKey && (e.key === '\\' || e.key === '|' || e.code === 'Backslash')) 
-                             || (e.ctrlKey && e.altKey && e.key === 'Enter');
+            const isActivator = (e.ctrlKey && e.shiftKey && (e.key === '\\' || e.key === '|' || e.code === 'Backslash'))
+                || (e.ctrlKey && e.altKey && e.key === 'Enter');
 
             if (isActivator) {
                 if (!isConsoleOpen) {
