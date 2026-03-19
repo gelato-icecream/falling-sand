@@ -618,19 +618,25 @@
             [190, 242, 100, 70], // 99: Transparent
             [163, 230, 53, 30],  // 100: Very transparent (simulated gap)
             [217, 249, 157, 60], // 101: Transparent
-            [132, 204, 22, 20],   // 102: Extremely transparent (simulated gap)
-            // Steam: palette indices 103-106 (grid IDs 256-259 mapped via -153)
-            [230, 230, 240, 35], // 103: Light steam
+            [132, 204, 22, 20],   // 102
+            // Steam: 103-106
+            [230, 230, 240, 35], // 103
             [210, 210, 220, 55], // 104
-            [250, 250, 255, 25], // 105: Thin steam
-            [220, 220, 230, 45], // 106
-            // --- SECRET MATERIALS ---
-            // Antimatter (ID 300 mapped to palette 150-153): Black with purple glow
-            [0, 0, 0],       // 150
-            [20, 0, 40],     // 151
-            [40, 0, 80],     // 152
-            [10, 0, 20]      // 153
+            [250, 250, 255, 25], // 105
+            [220, 220, 230, 45]   // 106
         ];
+
+        // --- SECRET MATERIAL PALETTE POPULATION ---
+        // Antimatter (ID 300 => Palette 150-153)
+        palette[150] = [0, 0, 0];
+        palette[151] = [20, 0, 40];
+        palette[152] = [40, 0, 80];
+        palette[153] = [10, 0, 20];
+        // Virus (ID 400 => Palette 154-157)
+        palette[154] = [255, 192, 203]; // Light Pink
+        palette[155] = [255, 105, 180]; // Hot Pink
+        palette[156] = [255, 20, 147];  // Deep Pink
+        palette[157] = [255, 240, 245]; // Lavender Blush
 
         const portalColors = [
             [], // 0
@@ -897,7 +903,9 @@
                     } else if (currentMaterialTool === 11) { // Portal Blue
                         if (val >= 131 && val <= 139) needsRemoval = true;
                     } else if (currentMaterialTool === 12) { // Portal Orange
-                        if (val >= 141 && val <= 149) needsRemoval = true;
+                        if (val >= 141 && grid[c][r] <= 149) needsRemoval = true;
+                    } else if (currentMaterialTool === 400) { // Virus
+                        if (val >= 400 && val <= 403) needsRemoval = true;
                     }
 
                     if (needsRemoval) {
@@ -1040,6 +1048,7 @@
         // --- CHEAT SYSTEM ---
         let cheatBuffer = "";
         let isAntimatterUnlocked = false;
+        let isVirusUnlocked = false;
         let isRainbowMode = false;
 
         // Create hidden cheat console
@@ -1106,6 +1115,7 @@
                             <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">flood</td><td style="padding: 8px;">Spawns a Deluge of Water</td></tr>
                             <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">quicksand</td><td style="padding: 8px;">Turns all Stone to Sand</td></tr>
                             <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">volcano</td><td style="padding: 8px;">Erupts Lava from Bottom</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">virus</td><td style="padding: 8px;">Unlocks Spreading Infection</td></tr>
                             <tr><td style="padding: 8px; font-weight: bold; color: #10b981;">help</td><td style="padding: 8px;">Show this Cheat List</td></tr>
                         </table>
                     </div>
@@ -1211,6 +1221,10 @@
                 isAntimatterUnlocked = true;
                 currentMaterialTool = 300;
                 showCheatMessage("🌀 SECRET UNLOCKED: ANTIMATTER 🌀");
+            } else if (code === 'virus' || code === 'infect') {
+                isVirusUnlocked = true;
+                currentMaterialTool = 400;
+                showCheatMessage("🌸 SECRET UNLOCKED: PINK VIRUS 🌸");
             } else if (code === 'rainbow') {
                 isRainbowMode = !isRainbowMode;
                 showCheatMessage(isRainbowMode ? "🌈 RAINBOW MODE ON 🌈" : "🌈 RAINBOW MODE OFF 🌈");
@@ -1342,7 +1356,7 @@
                 case '4': btnMetal.click(); break;
                 case '5': btnWater.click(); break;
                 case '6': btnAcid.click(); break;
-                case 'u': btnAcidPowder.click(); break;
+                case 'a': btnAcidPowder.click(); break;
                 case '7': btnLava.click(); break;
                 case '8': btnObsidian.click(); break;
                 case 'w': btnWood.click(); break;
@@ -1497,7 +1511,7 @@
                             if (i * i + j * j <= brushRad * brushRad) {
 
                                 // Only sand, water, and stone use the scatter RNG for organic spacing
-                                if ((currentMaterialTool === 1 || currentMaterialTool === 3 || currentMaterialTool === 4 || currentMaterialTool === 9 || currentMaterialTool === 10 || currentMaterialTool === 13 || currentMaterialTool === 14 || currentMaterialTool === 15 || currentMaterialTool === 16 || currentMaterialTool === 17 || currentMaterialTool === 18 || currentMaterialTool === 19 || currentMaterialTool === 20 || currentMaterialTool === 21 || currentMaterialTool === 22 || currentMaterialTool === 23 || currentMaterialTool === 24) && Math.random() > 0.4) continue;
+                                if ((currentMaterialTool === 1 || currentMaterialTool === 3 || currentMaterialTool === 4 || currentMaterialTool === 9 || currentMaterialTool === 10 || currentMaterialTool === 13 || currentMaterialTool === 14 || currentMaterialTool === 15 || currentMaterialTool === 16 || currentMaterialTool === 17 || currentMaterialTool === 18 || currentMaterialTool === 19 || currentMaterialTool === 20 || currentMaterialTool === 21 || currentMaterialTool === 22 || currentMaterialTool === 23 || currentMaterialTool === 24 || currentMaterialTool === 400) && Math.random() > 0.4) continue;
 
                                 let projectedGridColumn = x0 + i;
                                 let projectedGridRow = y0 + j;
@@ -1552,6 +1566,8 @@
                                         if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 3) + 186;
                                     } else if (currentMaterialTool === 300) { // Antimatter
                                         grid[projectedGridColumn][projectedGridRow] = 300 + Math.floor(Math.random() * 4);
+                                    } else if (currentMaterialTool === 400) { // Virus
+                                        grid[projectedGridColumn][projectedGridRow] = 400 + Math.floor(Math.random() * 4);
                                     } else if (currentMaterialTool === 22) { // Melted Sand
                                         if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 237;
                                     } else if (currentMaterialTool === 11) { // Portal Blue
@@ -1643,6 +1659,9 @@
                             }
                         }
                     }
+
+
+
 
                     let isCurrentInv = false;
                     if ((activeBlockEntityState >= 1 && activeBlockEntityState <= 4) || (activeBlockEntityState >= 10 && activeBlockEntityState <= 13)) {
@@ -1792,9 +1811,45 @@
                             }
                         }
                         return; // Antimatter stays if blocked
+                    } else if (activeBlockEntityState >= 400 && activeBlockEntityState <= 403) { // Virus Physics
+                        // 1. INFECTION: Spread to neighbors
+                        for (let xi = -1; xi <= 1; xi++) {
+                            for (let yi = -1; yi <= 1; yi++) {
+                                if (xi === 0 && yi === 0) continue;
+                                let nx = c + xi; let ny = rowScan + yi;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    let nVal = grid[nx][ny];
+                                    // Infect Sand, Wood, Stone, Water, Acid, or Steel
+                                    if ((nVal >= 1 && nVal <= 4) || (nVal >= 10 && nVal <= 14) || (nVal >= 172 && nVal <= 174) || (nVal >= 6 && nVal <= 9) || (nVal >= 116 && nVal <= 117) || (nVal >= 15 && nVal <= 115)) {
+                                        if (Math.random() < 0.25) grid[nx][ny] = 400 + Math.floor(Math.random() * 4);
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. LIQUID MOVEMENT
+                        let bY = rowScan + dir;
+                        if (bY >= 0 && bY < height) {
+                            let beneath = grid[c][bY];
+                            if (beneath === 0) {
+                                grid[c][bY] = activeBlockEntityState; grid[c][rowScan] = 0;
+                            } else {
+                                let lx = c - 1; let rx = c + 1;
+                                let bl = (lx >= 0) ? grid[lx][bY] : 5;
+                                let br = (rx < width) ? grid[rx][bY] : 5;
+                                if (bl === 0 && br === 0) {
+                                    grid[Math.random() < 0.5 ? lx : rx][bY] = activeBlockEntityState; grid[c][rowScan] = 0;
+                                } else if (bl === 0) {
+                                    grid[lx][bY] = activeBlockEntityState; grid[c][rowScan] = 0;
+                                } else if (br === 0) {
+                                    grid[rx][bY] = activeBlockEntityState; grid[c][rowScan] = 0;
+                                }
+                            }
+                        }
+                        return;
                     }
 
-                    function isLiquidOrEmpty(val) { return val === 0 || (val >= 6 && val <= 9) || (val >= 116 && val <= 117) || (val >= 118 && val <= 121) || (val >= 165 && val <= 167) || (val >= 168 && val <= 171) || (val >= 178 && val <= 181) || (val >= 182 && val <= 185) || (val >= 213 && val <= 236) || (val >= 237 && val <= 240); }
+                    function isLiquidOrEmpty(val) { return val === 0 || (val >= 6 && val <= 9) || (val >= 116 && val <= 117) || (val >= 118 && val <= 121) || (val >= 165 && val <= 167) || (val >= 168 && val <= 171) || (val >= 178 && val <= 181) || (val >= 182 && val <= 185) || (val >= 213 && val <= 236) || (val >= 237 && val <= 240) || (val >= 400 && val <= 403); }
                     function isWater(val) { return val >= 6 && val <= 9; }
 
                     function swapWithDisplacement(srcX, srcY, tgtX, tgtY) {
@@ -2206,6 +2261,10 @@
                                         } else if (v >= 116 && v <= 117) { // Acid
                                             if (Math.random() < 0.5) {
                                                 grid[nx][ny] = Math.floor(Math.random() * 4) + 252; // Methane
+                                            }
+                                        } else if (v >= 400 && v <= 403) { // Virus
+                                            if (Math.random() < 0.6) { // Uranium KILLS the virus
+                                                grid[nx][ny] = Math.floor(Math.random() * 4) + 256; // Turns to Steam
                                             }
                                         }
                                     }
@@ -3472,6 +3531,8 @@
                             materialDisplayState = materialState - 153; // 252->99, 256->103
                         } else if (materialState >= 300 && materialState <= 303) {
                             materialDisplayState = materialState - 150; // 300-303 mapped to palette 150-153
+                        } else if (materialState >= 400 && materialState <= 403) {
+                            materialDisplayState = materialState - 246; // 400-403 mapped to palette 154-157
                         } else {
                             materialDisplayState = materialState;
                         }
@@ -3500,10 +3561,11 @@
                         let b = rbgColorDataCache[2];
                         let a = rbgColorDataCache.length > 3 ? rbgColorDataCache[3] : 255;
 
-                        // Uranium Glow pulsing effect
-                        if (materialState2 >= 248 && materialState2 <= 251) {
+                        // Uranium & Virus Glow pulsing effect
+                        if ((materialState2 >= 248 && materialState2 <= 251) || (materialState2 >= 400 && materialState2 <= 403)) {
                             const glow = performance.now() / 400;
-                            const pulse = Math.sin(glow) * 0.35 + 1.1; // Pulsing brightness multiplier
+                            const isVirus = materialState2 >= 400;
+                            const pulse = isVirus ? (Math.sin(glow * 1.5) * 0.4 + 1.4) : (Math.sin(glow) * 0.35 + 1.1);
                             r = Math.min(255, r * pulse);
                             g = Math.min(255, g * pulse);
                             b = Math.min(255, b * pulse);
