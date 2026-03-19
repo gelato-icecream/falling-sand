@@ -747,10 +747,14 @@
         let isUraniumInverted = false;
         let isMethaneInverted = false;
         let isSteamInverted = false;
+        let isAntimatterInverted = false;
+        let isVirusInverted = false;
 
         // Mouse coordinate math, translating high-res monitor pixels into snapped CA engine blocks
         function recomputeMouseCoords(event) {
             const rect = canvas.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return; // Safety guard for resizing
+
             // We get relative raw pixels from edge
             const relativePixelX = event.clientX - rect.left;
             const relativePixelY = event.clientY - rect.top;
@@ -759,10 +763,16 @@
             const horizontalScaleMatrix = displayWidth / rect.width;
             const verticalScaleMatrix = displayHeight / rect.height;
 
+            if (!isFinite(horizontalScaleMatrix) || !isFinite(verticalScaleMatrix)) return;
+
             // Offset the display window into the physics grid cleanly
             mouseX = Math.floor(relativePixelX * horizontalScaleMatrix);
             // The canvas dynamically displays mapped entirely from gridY = height - displayHeight downwards
             mouseY = Math.floor(relativePixelY * verticalScaleMatrix) + (height - displayHeight);
+
+            // Ultimate boundary clamping
+            if (mouseX < 0) mouseX = 0; if (mouseX >= width) mouseX = width - 1;
+            if (mouseY < 0) mouseY = 0; if (mouseY >= height) mouseY = height - 1;
         }
 
         canvas.addEventListener('mousedown', (e) => {
@@ -1106,17 +1116,20 @@
                     <div>
                         <h2 style="border-bottom: 2px solid #334155; padding-bottom: 10px;">🤫 Secret Cheat Codes</h2>
                         <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">godmode</td><td style="padding: 8px;">Toggle Massive God Brush</td></tr>
-                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">void</td><td style="padding: 8px;">Unlock Secret Antimatter</td></tr>
-                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">rainbow</td><td style="padding: 8px;">Toggle Party Rainbow Effect</td></tr>
-                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">kaboom</td><td style="padding: 8px;">Lightning Strike Swarm</td></tr>
-                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">supernova</td><td style="padding: 8px;">Giant Central Firestorm</td></tr>
-                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">iceage</td><td style="padding: 8px;">Freeze all Water to Ice</td></tr>
-                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">flood</td><td style="padding: 8px;">Spawns a Deluge of Water</td></tr>
-                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">quicksand</td><td style="padding: 8px;">Turns all Stone to Sand</td></tr>
-                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">volcano</td><td style="padding: 8px;">Erupts Lava from Bottom</td></tr>
-                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">virus</td><td style="padding: 8px;">Unlocks Spreading Infection</td></tr>
-                            <tr><td style="padding: 8px; font-weight: bold; color: #10b981;">help</td><td style="padding: 8px;">Show this Cheat List</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">gm / god</td><td style="padding: 8px;">Toggle Massive God Brush</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">am / void</td><td style="padding: 8px;">Unlock Secret Antimatter</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">rb / rainbow</td><td style="padding: 8px;">Toggle Party Rainbow Effect</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">kb / boom</td><td style="padding: 8px;">Lightning Strike Swarm</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">sn / nova</td><td style="padding: 8px;">Giant Central Firestorm</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">ice / iceage</td><td style="padding: 8px;">Freeze all Water to Ice</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">fd / flood</td><td style="padding: 8px;">Spawns a Deluge of Water</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">qs / quick</td><td style="padding: 8px;">Turns all Stone to Sand</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">vc / volcano</td><td style="padding: 8px;">Erupts Lava from Bottom</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">vi / virus</td><td style="padding: 8px;">Unlocks Pink Virus Slime</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">iv / ia / is</td><td style="padding: 8px;">Invert Virus / AM / Both</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">fr / time</td><td style="padding: 8px;">Pause/Resume Simulation</td></tr>
+                            <tr style="border-bottom: 1px solid #334155;"><td style="padding: 8px; font-weight: bold; color: #10b981;">cl / clear</td><td style="padding: 8px;">Wipe everything from screen</td></tr>
+                            <tr><td style="padding: 8px; font-weight: bold; color: #10b981;">hl / help</td><td style="padding: 8px;">Show this Cheat List</td></tr>
                         </table>
                     </div>
                 </div>
@@ -1153,7 +1166,7 @@
 
         function processCheat(code) {
             code = code.trim().toLowerCase();
-            if (code === 'godmode' || code === 'god') {
+            if (code === 'godmode' || code === 'god' || code === 'gm') {
                 if (brushSizeDom.max == 100) {
                     brushSizeDom.max = 15;
                     brushSizeDom.value = 4;
@@ -1163,14 +1176,14 @@
                     brushSizeDom.value = 50;
                     showCheatMessage("⚡ GOD MODE: MASSIVE BRUSH ⚡");
                 }
-            } else if (code === 'flood') {
+            } else if (code === 'flood' || code === 'fd') {
                 for (let c = 0; c < width; c++) {
                     for (let r = 0; r < 20; r++) {
                         grid[c][r] = Math.floor(Math.random() * 4) + 6; // Water
                     }
                 }
                 showCheatMessage("🌊 TSUNAMI FLOOD! 🌊");
-            } else if (code === 'quicksand') {
+            } else if (code === 'quicksand' || code === 'qs') {
                 for (let c = 0; c < width; c++) {
                     for (let r = 0; r < height; r++) {
                         let v = grid[c][r];
@@ -1178,7 +1191,7 @@
                     }
                 }
                 showCheatMessage("⏳ THE GROUND IS TURNING TO SAND ⏳");
-            } else if (code === 'volcano') {
+            } else if (code === 'volcano' || code === 'vc') {
                 showCheatMessage("🌋 VOLCANIC ERUPTION! 🌋");
                 const cx = Math.floor(width / 2);
                 let frames = 200; // ~4-5 seconds of eruption
@@ -1217,33 +1230,43 @@
                         }
                     }
                 }, 30);
-            } else if (code === 'void' || code === 'antimatter') {
+            } else if (code === 'void' || code === 'antimatter' || code === 'am') {
                 isAntimatterUnlocked = true;
                 currentMaterialTool = 300;
                 showCheatMessage("🌀 SECRET UNLOCKED: ANTIMATTER 🌀");
-            } else if (code === 'virus' || code === 'infect') {
+            } else if (code === 'virus' || code === 'infect' || code === 'vi') {
                 isVirusUnlocked = true;
                 currentMaterialTool = 400;
                 showCheatMessage("🌸 SECRET UNLOCKED: PINK VIRUS 🌸");
-            } else if (code === 'rainbow') {
+            } else if (code === 'invert virus' || code === 'iv') {
+                isVirusInverted = !isVirusInverted;
+                showCheatMessage(isVirusInverted ? "🌀 VIRUS GRAVITY REVERSED 🌀" : "🌸 VIRUS GRAVITY NORMAL 🌸");
+            } else if (code === 'invert antimatter' || code === 'invert void' || code === 'ia') {
+                isAntimatterInverted = !isAntimatterInverted;
+                showCheatMessage(isAntimatterInverted ? "⚛️ ANTIMATTER COLLAPSING ⚛️" : "🌀 ANTIMATTER ASCENDING 🌀");
+            } else if (code === 'invert secrets' || code === 'is') {
+                isVirusInverted = !isVirusInverted;
+                isAntimatterInverted = !isAntimatterInverted;
+                showCheatMessage("🧬 SECRET GRAVITY FLIPPED! 🧬");
+            } else if (code === 'rainbow' || code === 'rb') {
                 isRainbowMode = !isRainbowMode;
                 showCheatMessage(isRainbowMode ? "🌈 RAINBOW MODE ON 🌈" : "🌈 RAINBOW MODE OFF 🌈");
-            } else if (code === 'kaboom' || code === 'boom') {
+            } else if (code === 'kaboom' || code === 'boom' || code === 'kb') {
                 for (let i = 0; i < 150; i++) {
                     let rx = Math.floor(Math.random() * width);
                     let ry = Math.floor(Math.random() * height);
                     grid[rx][ry] = 150;
                 }
                 showCheatMessage("💥 KABOOM! 💥");
-            } else if (code === 'freeze') {
+            } else if (code === 'freeze' || code === 'fr' || code === 'time') {
                 isPaused = !isPaused;
                 btnPause.classList.toggle('active', isPaused);
                 btnPause.innerText = isPaused ? 'Resume Time' : 'Pause Time';
                 showCheatMessage(isPaused ? "❄ TIME FROZEN ❄" : "🔥 TIME RESUMED 🔥");
-            } else if (code === 'clear') {
+            } else if (code === 'clear' || code === 'cl') {
                 for (let c = 0; c < width; c++) grid[c].fill(0);
                 showCheatMessage("✨ SCREEN PURIFIED ✨");
-            } else if (code === 'supernova' || code === 'nova') {
+            } else if (code === 'supernova' || code === 'nova' || code === 'sn') {
                 const cx = Math.floor(width / 2);
                 const cy = Math.floor(height / 2);
                 const radius = 60;
@@ -1258,7 +1281,7 @@
                     }
                 }
                 showCheatMessage("🌟 SUPERNOVA ACTIVATED 🌟");
-            } else if (code === 'iceage' || code === 'freezeall') {
+            } else if (code === 'iceage' || code === 'freezeall' || code === 'ice') {
                 for (let c = 0; c < width; c++) {
                     for (let r = 0; r < height; r++) {
                         let v = grid[c][r];
@@ -1406,8 +1429,13 @@
         }
 
         function renderFramePipeline() {
-            // Read fire temperature slider once at the top — used by both physics and render
+            try {
+                // Read fire temperature slider once at the top — used by both physics and render
             const currentFireTemp = parseInt(fireTempDom.value); // 0-100
+
+            // Helper for material categorization
+            const isLiquidOrEmpty = (val) => val === 0 || (val >= 6 && val <= 9) || (val >= 116 && val <= 117) || (val >= 118 && val <= 121) || (val >= 165 && val <= 167) || (val >= 168 && val <= 171) || (val >= 178 && val <= 181) || (val >= 182 && val <= 185) || (val >= 213 && val <= 236) || (val >= 237 && val <= 240) || (val >= 400 && val <= 403);
+            const isWater = (val) => val >= 6 && val <= 9;
 
             // STEP 0: Track Portals globally
             let portalOutCells = Array.from({ length: 10 }, () => []);
@@ -1503,7 +1531,8 @@
                 let sy = (y0 < y1) ? 1 : -1;
                 let err = dx - dy;
 
-                while (true) {
+                let paintSafetyIter = 0;
+                while (paintSafetyIter++ < 1000) {
                     // Construct a mathematical circle at this interpolated point
                     for (let i = -brushRad; i <= brushRad; i++) {
                         for (let j = -brushRad; j <= brushRad; j++) {
@@ -1711,7 +1740,9 @@
                     } else if (activeBlockEntityState >= 256 && activeBlockEntityState <= 259) {
                         isCurrentInv = !isSteamInverted; // Steam rises by default
                     } else if (activeBlockEntityState >= 300 && activeBlockEntityState <= 303) {
-                        isCurrentInv = true; // Antimatter floats up!
+                        isCurrentInv = isAntimatterInverted; // Defaults to false (falling-like processing)
+                    } else if (activeBlockEntityState >= 400 && activeBlockEntityState <= 403) {
+                        isCurrentInv = isVirusInverted; // Virus falls by default
                     }
 
                     // Determines absolute world gravity direction for THIS specific particle
@@ -1754,9 +1785,12 @@
                             let dy = pInY - rowScan;
 
                             // Fast-forward through the portal mass in the entering direction
-                            while (exitX + dx >= 0 && exitX + dx < width && exitY + dy >= 0 && exitY + dy < height && grid[exitX + dx][exitY + dy] === 140 + ch) {
-                                exitX += dx;
-                                exitY += dy;
+                            if (dx !== 0 || dy !== 0) {
+                                let portalSafety = 0;
+                                while (exitX + dx >= 0 && exitX + dx < width && exitY + dy >= 0 && exitY + dy < height && grid[exitX + dx][exitY + dy] === 140 + ch && portalSafety++ < 25) {
+                                    exitX += dx;
+                                    exitY += dy;
+                                }
                             }
 
                             // Attempt to pop it out going forward (same dx, dy) to keep the shape intact!
@@ -1794,20 +1828,22 @@
                                 }
                             }
                         }
-                        // Floating movement
-                        let bY = rowScan - 1;
-                        if (Math.random() < 0.8) {
-                            if (bY >= 0 && bY < height && grid[c][bY] === 0) {
-                                grid[c][bY] = activeBlockEntityState;
+                        // Floating movement: Random drift instead of upward rise
+                        if (Math.random() < 0.6) {
+                            let dr = Math.floor(Math.random() * 3) - 1; // -1, 0, 1
+                            let dc = Math.floor(Math.random() * 3) - 1;
+                            
+                            // If inverted, apply strong gravity bias
+                            if (isAntimatterInverted && Math.random() < 0.7) {
+                                dr = isInvertedGravity ? -1 : 1;
+                            }
+                            
+                            let nr = rowScan + dr;
+                            let nc = c + dc;
+                            
+                            if (nr >= 0 && nr < height && nc >= 0 && nc < width && grid[nc][nr] === 0) {
+                                grid[nc][nr] = activeBlockEntityState;
                                 grid[c][rowScan] = 0;
-                                return;
-                            } else {
-                                let wander = Math.random() < 0.5 ? -1 : 1;
-                                if (c + wander >= 0 && c + wander < width && bY >= 0 && bY < height && grid[c + wander][bY] === 0) {
-                                    grid[c + wander][bY] = activeBlockEntityState;
-                                    grid[c][rowScan] = 0;
-                                    return;
-                                }
                             }
                         }
                         return; // Antimatter stays if blocked
@@ -1848,9 +1884,6 @@
                         }
                         return;
                     }
-
-                    function isLiquidOrEmpty(val) { return val === 0 || (val >= 6 && val <= 9) || (val >= 116 && val <= 117) || (val >= 118 && val <= 121) || (val >= 165 && val <= 167) || (val >= 168 && val <= 171) || (val >= 178 && val <= 181) || (val >= 182 && val <= 185) || (val >= 213 && val <= 236) || (val >= 237 && val <= 240) || (val >= 400 && val <= 403); }
-                    function isWater(val) { return val >= 6 && val <= 9; }
 
                     function swapWithDisplacement(srcX, srcY, tgtX, tgtY) {
                         let tgtEntity = grid[tgtX][tgtY];
@@ -1995,15 +2028,17 @@
                             }
 
                             // Hot environment also triggers detonation
-                            if (!detonate && heatGrid && heatGrid[c + rowScan * width] > 80) {
+                            if (!detonate && heatGrid && heatGrid[c * height + rowScan] > 80) {
                                 detonate = true;
                             }
 
                             if (detonate) {
                                 // Instant Chain Reaction: Consume all nearby gunpowder to create one big BOOM
+                                grid[c][rowScan] = 0; // Clear the epicenter grain immediately!
                                 let totalGrains = 1;
-                                for (let ni = -24; ni <= 24; ni++) {
-                                    for (let nj = -24; nj <= 24; nj++) {
+                                const consumeRadius = 100; // Increased to catch the whole pile
+                                for (let ni = -consumeRadius; ni <= consumeRadius; ni++) {
+                                    for (let nj = -consumeRadius; nj <= consumeRadius; nj++) {
                                         if (ni === 0 && nj === 0) continue;
                                         let nx = c + ni; let ny = rowScan + nj;
                                         if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
@@ -2017,11 +2052,18 @@
                                 }
 
                                 // Calculate explosion radius based on energy
-                                const radius = Math.min(45, 10 + Math.floor(Math.sqrt(totalGrains) * 2.5));
-                                const explHeat = 100;
+                                const radius = Math.min(150, 10 + Math.floor(Math.sqrt(totalGrains) * 2.5));
+                                const explHeat = 150;
 
-                                // Inject heat into epicenter
-                                if (heatGridNext) heatGridNext[c + rowScan * width] = 100;
+                                // Inject heat into epicenter and spawn a blast of fire
+                                if (heatGridNext) heatGridNext[c * height + rowScan] = 150;
+                                for (let f = 0; f < 10; f++) {
+                                    let fx = c + Math.floor(Math.random() * 5) - 2;
+                                    let fy = rowScan + Math.floor(Math.random() * 5) - 2;
+                                    if (fx >= 0 && fx < width && fy >= 0 && fy < height) {
+                                        grid[fx][fy] = Math.floor(Math.random() * 4) + 178; // Center fire boom
+                                    }
+                                }
 
                                 // Optimized Single-Pass Blast Loop
                                 for (let i = -radius; i <= radius; i++) {
@@ -2040,7 +2082,7 @@
                                         if (dx === 0 && dy === 0) dy = -1;
 
                                         // Push force increases with distance
-                                        let force = dist < (radius * 0.4) ? 3 : (dist < (radius * 0.7) ? 2 : 1);
+                                        let force = dist < (radius * 0.4) ? 4 : (dist < (radius * 0.7) ? 2 : 1);
                                         let tx = ex + dx * force;
                                         let ty = ey + dy * force;
 
@@ -2074,7 +2116,7 @@
                                             }
                                         }
 
-                                        if (moved && Math.random() < 0.1) {
+                                        if (moved && Math.random() < 0.15) {
                                             grid[ex][ey] = Math.floor(Math.random() * 4) + 178;
                                         }
                                     }
@@ -2195,7 +2237,7 @@
                             }
                         } else if (activeBlockEntityState >= 189 && activeBlockEntityState <= 212) { // Burning Thermite
                             const myTier = Math.floor((activeBlockEntityState - 189) / 4);
-                            const firePart = () => 213 + myTier * 4 + Math.floor(Math.random() * 4);
+                            const firePartBase = 213 + myTier * 4;
 
                             let isTouchingWater = false;
                             for (let i = -1; i <= 1; i++) {
@@ -2218,7 +2260,7 @@
                                 for (let d of fireSpawnDirs) {
                                     let fx = c + d[0]; let fy = rowScan + d[1];
                                     if (fx >= 0 && fx < width && fy >= 0 && fy < height && grid[fx][fy] === 0) {
-                                        grid[fx][fy] = firePart();
+                                        grid[fx][fy] = firePartBase + Math.floor(Math.random() * 4);
                                         break;
                                     }
                                 }
@@ -3493,7 +3535,8 @@
                 return [base, bright, mid, dim]; // maps to fire states 168, 169, 170, 171
             })();
 
-            const startY = height - displayHeight;
+            let startY = height - displayHeight;
+            if (startY < 0) startY = 0; // Absolute safety for rendering start
             for (let r = 0; r < displayHeight; r++) {
                 for (let c = 0; c < displayWidth; c++) {
                     let gridC = c;
@@ -3579,6 +3622,7 @@
                 }
             }
             ctx.putImageData(imageData, 0, 0);
+            } catch (err) { console.error("FRAME ERROR: ", err); }
 
             // Throttle speed based on slider (0 = max speed/no delay, 100 = very slow/100ms delay)
             const delayMs = parseInt(simSpeedDom.value);
