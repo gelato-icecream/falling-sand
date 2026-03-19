@@ -291,7 +291,7 @@
     </div>
 
     <div class="header" id="main-header">
-        <h1>Falling <span>Sand</span></h1>
+        <h1 onclick="toggleCheatConsole(true)" style="cursor: pointer; user-select: none;" title="Click for Secrets">Falling <span>Sand</span></h1>
         <p>Drag the mouse over the screen, and watch the magic happen. <br>
             <small style="color: #64748b;">Shortcuts: 1-8 (Materials), 9/0 (Portals), - (Eraser), P (Pause), C (Clear),
                 Shift+C (Clear Active), F (Fullscreen), H (Hide UI), I (Invert Gravity), R (Reset)</small>
@@ -622,7 +622,13 @@
             [230, 230, 240, 35], // 103: Light steam
             [210, 210, 220, 55], // 104
             [250, 250, 255, 25], // 105: Thin steam
-            [220, 220, 230, 45]  // 106
+            [220, 220, 230, 45], // 106
+            // --- SECRET MATERIALS ---
+            // Antimatter (ID 300 mapped to palette 150-153): Black with purple glow
+            [0, 0, 0],       // 150
+            [20, 0, 40],     // 151
+            [40, 0, 80],     // 152
+            [10, 0, 20]      // 153
         ];
 
         const portalColors = [
@@ -1030,7 +1036,167 @@
             }
         });
 
-        document.addEventListener('keydown', (e) => {
+        // --- CHEAT SYSTEM ---
+        let cheatBuffer = "";
+        let isAntimatterUnlocked = false;
+        let isRainbowMode = false;
+        
+        // Create hidden cheat console
+        const cheatBox = document.createElement('input');
+        cheatBox.type = 'text';
+        cheatBox.placeholder = 'TYPE SECRET CODE...';
+        cheatBox.style.position = 'fixed';
+        cheatBox.style.top = '10%'; // Move to top-center for better visibility
+        cheatBox.style.left = '50%';
+        cheatBox.style.transform = 'translateX(-50%)';
+        cheatBox.style.backgroundColor = 'rgba(0, 0, 0, 0.95)';
+        cheatBox.style.color = '#eab308';
+        cheatBox.style.border = '2px solid #eab308';
+        cheatBox.style.padding = '12px 24px';
+        cheatBox.style.borderRadius = '40px';
+        cheatBox.style.outline = 'none';
+        cheatBox.style.fontFamily = 'monospace';
+        cheatBox.style.fontSize = '1.4rem';
+        cheatBox.style.fontWeight = 'bold';
+        cheatBox.style.textAlign = 'center';
+        cheatBox.style.width = '400px';
+        cheatBox.style.zIndex = '999999'; // ULTRA HIGH Z-INDEX
+        cheatBox.style.display = 'none'; 
+        cheatBox.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        cheatBox.style.boxShadow = '0 0 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(234, 179, 8, 0.4)';
+        document.body.appendChild(cheatBox);
+
+        function showCheatMessage(text) {
+            const msg = document.createElement('div');
+            msg.innerText = text;
+            msg.style.position = 'fixed';
+            msg.style.bottom = '140px';
+            msg.style.left = '50%';
+            msg.style.transform = 'translateX(-50%)';
+            msg.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+            msg.style.color = '#eab308';
+            msg.style.padding = '12px 24px';
+            msg.style.borderRadius = '30px';
+            msg.style.border = '2px solid #eab308';
+            msg.style.boxShadow = '0 0 20px rgba(234, 179, 8, 0.5)';
+            msg.style.fontWeight = '800';
+            msg.style.fontSize = '1.2rem';
+            msg.style.zIndex = '10000';
+            msg.style.pointerEvents = 'none';
+            msg.style.animation = 'cheatPopup 3s forwards';
+            document.body.appendChild(msg);
+            setTimeout(() => msg.remove(), 3000);
+        }
+
+        function processCheat(code) {
+            code = code.trim().toLowerCase();
+            if (code === 'godmode' || code === 'god') {
+                brushSizeDom.value = 50;
+                showCheatMessage("⚡ GOD MODE: MASSIVE BRUSH ⚡");
+            } else if (code === 'antigrav' || code === 'gravity') {
+                isInvertedGravity = !isInvertedGravity;
+                btnInvertAll.classList.toggle('active', isInvertedGravity);
+                showCheatMessage("🌍 GRAVITY INVERTED 🌍");
+            } else if (code === 'void' || code === 'antimatter') {
+                isAntimatterUnlocked = true;
+                currentMaterialTool = 300;
+                showCheatMessage("🌀 SECRET UNLOCKED: ANTIMATTER 🌀");
+            } else if (code === 'rainbow') {
+                isRainbowMode = !isRainbowMode;
+                showCheatMessage(isRainbowMode ? "🌈 RAINBOW MODE ON 🌈" : "🌈 RAINBOW MODE OFF 🌈");
+            } else if (code === 'kaboom' || code === 'boom') {
+                for (let i = 0; i < 150; i++) {
+                    let rx = Math.floor(Math.random() * width);
+                    let ry = Math.floor(Math.random() * height);
+                    grid[rx][ry] = 150; 
+                }
+                showCheatMessage("💥 KABOOM! 💥");
+            } else if (code === 'freeze') {
+                isPaused = !isPaused;
+                btnPause.classList.toggle('active', isPaused);
+                btnPause.innerText = isPaused ? 'Resume Time' : 'Pause Time';
+                showCheatMessage(isPaused ? "❄ TIME FROZEN ❄" : "🔥 TIME RESUMED 🔥");
+            } else if (code === 'clear') {
+                for (let c = 0; c < width; c++) grid[c].fill(0);
+                showCheatMessage("✨ SCREEN PURIFIED ✨");
+            } else if (code !== "") {
+                showCheatMessage("❌ INVALID CODE ❌");
+            }
+        }
+
+        const cheatStyle = document.createElement('style');
+        cheatStyle.textContent = `
+            @keyframes cheatPopup {
+                0% { opacity: 0; transform: translate(-50%, 20px); scale: 0.8; }
+                10% { opacity: 1; transform: translate(-50%, 0); scale: 1.1; }
+                20% { transform: translate(-50%, 0); scale: 1; }
+                80% { opacity: 1; transform: translate(-50%, 0); scale: 1; }
+                100% { opacity: 0; transform: translate(-50%, -40px); scale: 0.9; }
+            }
+            .cheat-focus-pulse {
+                animation: cheatPulse 2s infinite ease-in-out;
+            }
+            @keyframes cheatPulse {
+                0% { box-shadow: 0 0 10px rgba(234, 179, 8, 0.3); }
+                50% { box-shadow: 0 0 25px rgba(234, 179, 8, 0.7); }
+                100% { box-shadow: 0 0 10px rgba(234, 179, 8, 0.3); }
+            }
+        `;
+        document.head.appendChild(cheatStyle);
+        cheatBox.classList.add('cheat-focus-pulse');
+
+        function toggleCheatConsole(show) {
+            if (show === undefined) show = cheatBox.style.display === 'none';
+            if (show) {
+                cheatBox.style.display = 'block';
+                setTimeout(() => {
+                    cheatBox.focus();
+                    cheatBox.value = "";
+                }, 50);
+            } else {
+                cheatBox.style.display = 'none';
+                cheatBox.blur();
+            }
+        }
+
+        // Invisible trigger in bottom-right corner for mouse users
+        const secretTrigger = document.createElement('div');
+        secretTrigger.style.cssText = 'position:fixed; bottom:0; right:0; width:10px; height:10px; z-index:9999999; cursor:pointer; background:transparent;';
+        secretTrigger.title = "Secret Access";
+        secretTrigger.onclick = () => toggleCheatConsole(true);
+        document.documentElement.appendChild(secretTrigger);
+
+        // GLOBAL CAPTURE LISTENER (By-passes most event blocks)
+        window.addEventListener('keydown', (e) => {
+            const isConsoleOpen = cheatBox.style.display === 'block';
+
+            // Toggle with Enter, Slash, or Tilde (Backquote)
+            if (e.key === 'Enter' || e.key === '/' || e.key === '`' || e.key === 'Backquote') {
+                if (isConsoleOpen) {
+                    if (e.key === 'Enter') {
+                        processCheat(cheatBox.value);
+                        toggleCheatConsole(false);
+                    }
+                } else {
+                    toggleCheatConsole(true);
+                }
+                e.preventDefault();
+                return;
+            }
+
+            // Close with Escape
+            if (e.key === 'Escape' && isConsoleOpen) {
+                toggleCheatConsole(false);
+                return;
+            }
+
+            // Prevent game shortcuts while typing code
+            if (isConsoleOpen) {
+                e.stopPropagation();
+                return;
+            }
+
+            // Skip shortcuts if focusing any input
             if (e.target.tagName.toLowerCase() === 'input') return;
 
             switch (e.key.toLowerCase()) {
@@ -1068,7 +1234,26 @@
                 case 'f': btnFullscreen.click(); break;
                 case 'h': btnToggleUi.click(); break;
             }
-        });
+        }, { capture: true, passive: false });
+
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+            if (s === 0) { r = g = b = l; } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1; if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+        }
 
         function renderFramePipeline() {
             // Read fire temperature slider once at the top — used by both physics and render
@@ -1229,6 +1414,8 @@
                                         if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 182;
                                     } else if (currentMaterialTool === 21) { // Thermite (solid block, like wood)
                                         if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 3) + 186;
+                                    } else if (currentMaterialTool === 300) { // Antimatter
+                                        grid[projectedGridColumn][projectedGridRow] = 300 + Math.floor(Math.random() * 4);
                                     } else if (currentMaterialTool === 22) { // Melted Sand
                                         if (grid[projectedGridColumn][projectedGridRow] === 0) grid[projectedGridColumn][projectedGridRow] = Math.floor(Math.random() * 4) + 237;
                                     } else if (currentMaterialTool === 11) { // Portal Blue
@@ -1368,6 +1555,8 @@
                         isCurrentInv = !isMethaneInverted; // Gas rises by default
                     } else if (activeBlockEntityState >= 256 && activeBlockEntityState <= 259) {
                         isCurrentInv = !isSteamInverted; // Steam rises by default
+                    } else if (activeBlockEntityState >= 300 && activeBlockEntityState <= 303) {
+                        isCurrentInv = true; // Antimatter floats up!
                     }
 
                     // Determines absolute world gravity direction for THIS specific particle
@@ -1433,6 +1622,40 @@
                                 }
                             }
                         }
+                    }
+
+                    if (activeBlockEntityState >= 300 && activeBlockEntityState <= 303) {
+                        // ANTIMATTER PHYSICS: It eats EVERYTHING it touches
+                        for (let i = -1; i <= 1; i++) {
+                            for (let j = -1; j <= 1; j++) {
+                                if (i === 0 && j === 0) continue;
+                                let cx = c + i; let cy = rowScan + j;
+                                if (cx >= 0 && cx < width && cy >= 0 && cy < height) {
+                                    let v = grid[cx][cy];
+                                    if (v !== 0 && !(v >= 300 && v <= 303)) {
+                                        grid[cx][cy] = 0;
+                                        if (Math.random() < 0.1) grid[cx][cy] = 150; // Spark
+                                    }
+                                }
+                            }
+                        }
+                        // Floating movement
+                        let bY = rowScan - 1; 
+                        if (Math.random() < 0.8) {
+                            if (bY >= 0 && bY < height && grid[c][bY] === 0) {
+                                grid[c][bY] = activeBlockEntityState;
+                                grid[c][rowScan] = 0;
+                                return;
+                            } else {
+                                let wander = Math.random() < 0.5 ? -1 : 1;
+                                if (c + wander >= 0 && c + wander < width && bY >= 0 && bY < height && grid[c + wander][bY] === 0) {
+                                    grid[c + wander][bY] = activeBlockEntityState;
+                                    grid[c][rowScan] = 0;
+                                    return;
+                                }
+                            }
+                        }
+                        return; // Antimatter stays if blocked
                     }
 
                     function isLiquidOrEmpty(val) { return val === 0 || (val >= 6 && val <= 9) || (val >= 116 && val <= 117) || (val >= 118 && val <= 121) || (val >= 165 && val <= 167) || (val >= 168 && val <= 171) || (val >= 178 && val <= 181) || (val >= 182 && val <= 185) || (val >= 213 && val <= 236) || (val >= 237 && val <= 240); }
@@ -3111,6 +3334,8 @@
                             materialDisplayState = materialState - 153; // 248->95
                         } else if (materialState >= 252 && materialState <= 259) { // Methane and Steam
                             materialDisplayState = materialState - 153; // 252->99, 256->103
+                        } else if (materialState >= 300 && materialState <= 303) {
+                            materialDisplayState = materialState - 150; // 300-303 mapped to palette 150-153
                         } else {
                             materialDisplayState = materialState;
                         }
@@ -3126,6 +3351,12 @@
                         imageData.data[rawImageOffset] = fc[0];
                         imageData.data[rawImageOffset + 1] = fc[1];
                         imageData.data[rawImageOffset + 2] = fc[2];
+                    } else if (isRainbowMode && materialState2 !== 0) {
+                        const hue = (performance.now() / 15 + gridC + gridR) % 360;
+                        const rgb = hslToRgb(hue / 360, 0.8, 0.6);
+                        imageData.data[rawImageOffset] = rgb[0];
+                        imageData.data[rawImageOffset + 1] = rgb[1];
+                        imageData.data[rawImageOffset + 2] = rgb[2];
                     } else {
                         let rbgColorDataCache = palette[materialDisplayState] || palette[0];
                         let r = rbgColorDataCache[0];
