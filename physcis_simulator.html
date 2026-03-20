@@ -856,6 +856,144 @@
             if (heatGridNext) heatGridNext.fill(0);
         });
 
+        // --- NEW SECRET COMMAND SYSTEM ---
+        const materialCommands = {
+            "sand": btnSand, "stone": btnStone, "rock": btnStone, "steel": btnSteel, "metal": btnMetal, "iron": btnMetal,
+            "water": btnWater, "liquid": btnWater, "acid": btnAcid, "corrosion": btnAcid, "powder": btnAcidPowder,
+            "lava": btnLava, "magma": btnLava, "molten": btnMoltenMetal, "melted": btnMeltedSand, "glass": btnGlass,
+            "shards": btnGlassShards, "obsidian": btnObsidian, "thermite": btnThermite, "wood": btnWood, "log": btnWood,
+            "gunpowder": btnGunpowder, "lightning": btnLightning, "zap": btnLightning, "ice": btnIce, "freeze": btnIce,
+            "nitrogen": btnNitrogen, "cold": btnNitrogen, "fire": btnFire, "burn": btnFire, "flame": btnFire,
+            "methane": btnMethane, "gas": btnMethane, "uranium": btnUranium, "nuclear": btnUranium, "nuke": btnUranium,
+            "steam": btnSteam, "vapor": btnSteam, "erase": btnErase, "eraser": btnErase, "air": btnErase, "clear": btnClear,
+            "reset": btnReset, "pause": btnPause, "stop": btnPause, "antimatter": "am", "void": "am", "virus": "vi",
+            "sludge": "vi", "rainbow": "rb", "party": "rb", "boom": "kb", "kaboom": "kb", "help": "hl"
+        };
+
+        let terminalState = "LOCKED"; // LOCKED, PASSWORD, UNLOCKED
+        const MASTER_PASSWORD = "falling-sand";
+
+        const secretTerminal = document.createElement('div');
+        secretTerminal.id = 'secret-terminal';
+        secretTerminal.style.cssText = `
+            position: fixed; top: -300px; left: 50%; transform: translateX(-50%);
+            width: 500px; background: rgba(10, 10, 15, 0.95); border: 1px solid #334155;
+            border-radius: 12px; padding: 15px; z-index: 10000; display: none; flex-direction: column;
+            gap: 10px; box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 15px rgba(234, 179, 8, 0.1);
+            transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(20px); font-family: 'Consolas', 'Monaco', monospace;
+        `;
+
+        const terminalTitle = document.createElement('div');
+        terminalTitle.style.cssText = `
+            font-size: 0.7rem; color: #64748b; letter-spacing: 2px; font-weight: 800;
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b;
+            padding-bottom: 8px; margin-bottom: 5px;
+        `;
+        terminalTitle.innerHTML = `<span>SYSTEM KERNEL v4.0.2</span> <span id="term-status" style="color: #ef4444;">[LOCKED]</span>`;
+        secretTerminal.appendChild(terminalTitle);
+
+        const terminalInput = document.createElement('input');
+        terminalInput.type = 'text';
+        terminalInput.placeholder = '> REQUIRING AUTHORIZATION...';
+        terminalInput.style.cssText = `
+            background: transparent; border: none; color: #eab308; outline: none;
+            font-size: 1.1rem; width: 100%; font-weight: bold;
+        `;
+        secretTerminal.appendChild(terminalInput);
+
+        const terminalLog = document.createElement('div');
+        terminalLog.style.cssText = `font-size: 0.7rem; color: #475569; margin-top: 5px;`;
+        terminalLog.innerText = "ACCESS RESTRICTED - UNAUTHORIZED USE PROHIBITED";
+        secretTerminal.appendChild(terminalLog);
+
+        document.body.appendChild(secretTerminal);
+
+        function showTerminal() {
+            secretTerminal.style.display = 'flex';
+            setTimeout(() => {
+                secretTerminal.style.top = '20px';
+                terminalInput.focus();
+            }, 10);
+            
+            if (terminalState === "LOCKED") {
+                terminalInput.placeholder = "> ENTER SECURITY PASSWORD...";
+                terminalInput.type = "password";
+            } else {
+                terminalInput.placeholder = "> COMMAND_";
+                terminalInput.type = "text";
+            }
+        }
+
+        function hideTerminal() {
+            secretTerminal.style.top = '-300px';
+            setTimeout(() => {
+                secretTerminal.style.display = 'none';
+            }, 400);
+            terminalInput.blur();
+            terminalInput.value = "";
+        }
+
+        terminalInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const val = terminalInput.value.trim();
+                
+                if (terminalState === "LOCKED") {
+                    if (val === MASTER_PASSWORD) {
+                        terminalState = "UNLOCKED";
+                        document.getElementById('term-status').innerText = "[AUTHORIZED]";
+                        document.getElementById('term-status').style.color = "#10b981";
+                        terminalInput.type = "text";
+                        terminalInput.placeholder = "> COMMAND_";
+                        terminalInput.value = "";
+                        terminalLog.innerText = "WELCOME, OPERATOR. SYSTEM READY.";
+                        terminalLog.style.color = "#10b981";
+                        showCheatMessage("✅ TERMINAL DECRYPTED ✅");
+                    } else {
+                        terminalLog.innerText = "INVALID CREDENTIALS. RETRYING...";
+                        terminalLog.style.color = "#ef4444";
+                        terminalInput.value = "";
+                        showCheatMessage("❌ ACCESS DENIED ❌");
+                    }
+                    return;
+                }
+
+                if (terminalState === "UNLOCKED") {
+                    const query = val.toLowerCase();
+                    if (query === "lock") {
+                        terminalState = "LOCKED";
+                        document.getElementById('term-status').innerText = "[LOCKED]";
+                        document.getElementById('term-status').style.color = "#ef4444";
+                        hideTerminal();
+                        return;
+                    }
+
+                    // Process Command
+                    let bestMatch = null;
+                    for (const [cmd, target] of Object.entries(materialCommands)) {
+                        if (cmd === query) { bestMatch = { cmd, target }; break; }
+                        if (cmd.startsWith(query)) bestMatch = { cmd, target };
+                    }
+
+                    if (bestMatch) {
+                        if (typeof bestMatch.target === 'string') {
+                            processCheat(bestMatch.target);
+                        } else {
+                            bestMatch.target.click();
+                        }
+                        showCheatMessage(`EXECUTED: ${bestMatch.cmd.toUpperCase()}`);
+                        hideTerminal();
+                    } else {
+                        terminalLog.innerText = `ERR: UNKNOWN COMMAND '${query.toUpperCase()}'`;
+                        terminalLog.style.color = "#f97316";
+                        terminalInput.value = "";
+                    }
+                }
+            } else if (e.key === 'Escape') {
+                hideTerminal();
+            }
+        });
+
         btnClearActive.addEventListener('click', () => {
             // Only erase particles that match the currently selected brush tool
             for (let c = 0; c < width; c++) {
@@ -1060,31 +1198,6 @@
         let isAntimatterUnlocked = false;
         let isVirusUnlocked = false;
         let isRainbowMode = false;
-
-        // Create hidden cheat console
-        const cheatBox = document.createElement('input');
-        cheatBox.type = 'text';
-        cheatBox.placeholder = 'TYPE SECRET CODE...';
-        cheatBox.style.position = 'fixed';
-        cheatBox.style.top = '10%'; // Move to top-center for better visibility
-        cheatBox.style.left = '50%';
-        cheatBox.style.transform = 'translateX(-50%)';
-        cheatBox.style.backgroundColor = 'rgba(0, 0, 0, 0.95)';
-        cheatBox.style.color = '#eab308';
-        cheatBox.style.border = '2px solid #eab308';
-        cheatBox.style.padding = '12px 24px';
-        cheatBox.style.borderRadius = '40px';
-        cheatBox.style.outline = 'none';
-        cheatBox.style.fontFamily = 'monospace';
-        cheatBox.style.fontSize = '1.4rem';
-        cheatBox.style.fontWeight = 'bold';
-        cheatBox.style.textAlign = 'center';
-        cheatBox.style.width = '400px';
-        cheatBox.style.zIndex = '999999'; // ULTRA HIGH Z-INDEX
-        cheatBox.style.display = 'none';
-        cheatBox.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-        cheatBox.style.boxShadow = '0 0 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(234, 179, 8, 0.4)';
-        document.body.appendChild(cheatBox);
 
         // Create Help Menu Overlay
         const helpOverlay = document.createElement('div');
@@ -1316,61 +1429,10 @@
             }
         `;
         document.head.appendChild(cheatStyle);
-        cheatBox.classList.add('cheat-focus-pulse');
-
-        function toggleCheatConsole(show) {
-            if (show === undefined) show = cheatBox.style.display === 'none';
-            if (show) {
-                cheatBox.style.display = 'block';
-                setTimeout(() => {
-                    cheatBox.focus();
-                    cheatBox.value = "";
-                }, 50);
-            } else {
-                cheatBox.style.display = 'none';
-                cheatBox.blur();
-            }
-        }
-
-
         // GLOBAL CAPTURE LISTENER (By-passes most event blocks)
         window.addEventListener('keydown', (e) => {
-            const isConsoleOpen = cheatBox.style.display === 'block';
-
-            // COMPLEX COMBO TO OPEN: Ctrl + Shift + \ OR Ctrl + Alt + Enter
-            const isActivator = (e.ctrlKey && e.shiftKey && (e.key === '\\' || e.key === '|' || e.code === 'Backslash'))
-                || (e.ctrlKey && e.altKey && e.key === 'Enter');
-
-            if (isActivator) {
-                if (!isConsoleOpen) {
-                    toggleCheatConsole(true);
-                    e.preventDefault();
-                }
-                return;
-            }
-
-            // Only allow ENTER to submit once it's already open
-            if (isConsoleOpen && e.key === 'Enter') {
-                processCheat(cheatBox.value);
-                toggleCheatConsole(false);
-                e.preventDefault();
-                return;
-            }
-
-            // Close with Escape
-            if (e.key === 'Escape' && isConsoleOpen) {
-                toggleCheatConsole(false);
-                return;
-            }
-
-            // Prevent game shortcuts while typing code
-            if (isConsoleOpen) {
-                e.stopPropagation();
-                return;
-            }
-
             // Skip shortcuts if focusing any input
-            if (e.target.tagName.toLowerCase() === 'input') return;
+            if (e.target.tagName.toLowerCase() === 'input' || secretTerminal.style.transform.includes('translateY(0)')) return;
 
             switch (e.key.toLowerCase()) {
                 case '1': btnSand.click(); break;
@@ -1407,6 +1469,13 @@
                 case 'f': btnFullscreen.click(); break;
                 case 'h': btnToggleUi.click(); break;
             }
+
+            // --- SECRET TERMINAL ACTIVATOR ---
+            // Even harder combo: Ctrl + Alt + Shift + Backspace
+            if (e.ctrlKey && e.altKey && e.shiftKey && e.key === 'Backspace') {
+                showTerminal();
+                e.preventDefault();
+            }
         }, { capture: true, passive: false });
 
         function hslToRgb(h, s, l) {
@@ -1437,22 +1506,37 @@
                 const isLiquidOrEmpty = (val) => val === 0 || (val >= 6 && val <= 9) || (val >= 116 && val <= 117) || (val >= 118 && val <= 121) || (val >= 165 && val <= 167) || (val >= 168 && val <= 171) || (val >= 178 && val <= 181) || (val >= 182 && val <= 185) || (val >= 213 && val <= 236) || (val >= 237 && val <= 240) || (val >= 400 && val <= 403);
                 const isWater = (val) => val >= 6 && val <= 9;
 
-                // STEP 0: Track Portals globally
-                let portalOutCells = Array.from({ length: 10 }, () => []);
-                let portalInMap = Array.from({ length: 10 }, () => new Map());
-                if (grid) {
+                // STEP 0: Track Portals globally (declared outside for processCell scope)
+                let portalOutCells = (window.cachedPortalOutCells || Array.from({ length: 10 }, () => []));
+                let portalInMap = (window.cachedPortalInMap || Array.from({ length: 10 }, () => new Map()));
+
+                if (grid && !isPaused) {
+                    let hasPortals = false;
+                    let newPortalOutCells = Array.from({ length: 10 }, () => []);
+                    let newPortalInMap = Array.from({ length: 10 }, () => new Map());
+
                     for (let c = 0; c < width; c++) {
                         for (let r = 0; r < height; r++) {
                             let val = grid[c][r];
                             if (val >= 131 && val <= 139) {
                                 let ch = val - 130;
-                                portalInMap[ch].set((c << 16) | r, portalInMap[ch].size);
+                                newPortalInMap[ch].set((c << 16) | r, newPortalInMap[ch].size);
+                                hasPortals = true;
                             }
                             else if (val >= 141 && val <= 149) {
                                 let ch = val - 140;
-                                portalOutCells[ch].push({ x: c, y: r });
+                                newPortalOutCells[ch].push({ x: c, y: r });
+                                hasPortals = true;
                             }
                         }
+                    }
+                    if (hasPortals) {
+                        portalOutCells = newPortalOutCells;
+                        portalInMap = newPortalInMap;
+                        window.cachedPortalOutCells = portalOutCells;
+                        window.cachedPortalInMap = portalInMap;
+                    } else {
+                        window.cachedPortalOutCells = null;
                     }
                 }
 
@@ -3061,6 +3145,7 @@
                                     if (i === 0 && j === 0) continue;
                                     let nx = c + i; let ny = rowScan + j;
                                     if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                        let nv = grid[nx][ny];
                                         if ((nv >= 6 && nv <= 9) || (nv >= 162 && nv <= 167)) {
                                             hitWaterF = true;
                                             if (nv >= 6 && nv <= 9) grid[nx][ny] = Math.floor(Math.random() * 4) + 256; // steam
@@ -3433,9 +3518,8 @@
                     if (Math.random() < 0.1) {
                         let wetSandCells = [];
                         let queue = [];
-                        // Using parallel Uint8Array instead of boolean array of arrays speeds up performance heavily
-                        let connectedToWater = new Array(width);
-                        for (let i = 0; i < width; i++) connectedToWater[i] = new Uint8Array(height);
+                        // Optimization: Use a flat Uint8Array instead of array-of-arrays for visitor map
+                        let connectedToWater = new Uint8Array(width * height);
 
                         for (let c = 0; c < width; c++) {
                             for (let r = 0; r < height; r++) {
@@ -3445,22 +3529,20 @@
                                     for (let i = -1; i <= 1; i++) {
                                         for (let j = -1; j <= 1; j++) {
                                             if (i === 0 && j === 0) continue;
-                                            if (c + i >= 0 && c + i < width && r + j >= 0 && r + j < height) {
-                                                let nVal = grid[c + i][r + j];
-                                                if (nVal >= 6 && nVal <= 9) {
-                                                    touchesWater = true;
-                                                    break;
-                                                }
+                                            let nx = c + i, ny = r + j;
+                                            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                                let nVal = grid[nx][ny];
+                                                if (nVal >= 6 && nVal <= 9) { touchesWater = true; break; }
                                             }
                                         }
                                         if (touchesWater) break;
                                     }
 
                                     if (touchesWater) {
-                                        connectedToWater[c][r] = 1;
-                                        queue.push({ x: c, y: r });
+                                        connectedToWater[c * height + r] = 1;
+                                        queue.push(c, r);
                                     } else {
-                                        wetSandCells.push({ x: c, y: r });
+                                        wetSandCells.push(c, r);
                                     }
                                 }
                             }
@@ -3468,28 +3550,30 @@
 
                         let head = 0;
                         while (head < queue.length) {
-                            let p = queue[head++];
+                            let px = queue[head++], py = queue[head++];
                             for (let i = -1; i <= 1; i++) {
                                 for (let j = -1; j <= 1; j++) {
                                     if (i === 0 && j === 0) continue;
-                                    let nx = p.x + i;
-                                    let ny = p.y + j;
+                                    let nx = px + i, ny = py + j;
                                     if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                                        let nVal = grid[nx][ny];
-                                        if ((nVal >= 10 && nVal <= 13) && connectedToWater[nx][ny] === 0) {
-                                            connectedToWater[nx][ny] = 1;
-                                            queue.push({ x: nx, y: ny });
+                                        let idx = nx * height + ny;
+                                        if (connectedToWater[idx] === 0) {
+                                            let nVal = grid[nx][ny];
+                                            if (nVal >= 10 && nVal <= 13) {
+                                                connectedToWater[idx] = 1;
+                                                queue.push(nx, ny);
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
 
-                        for (let i = 0; i < wetSandCells.length; i++) {
-                            let p = wetSandCells[i];
-                            if (connectedToWater[p.x][p.y] === 0) {
+                        for (let i = 0; i < wetSandCells.length; i += 2) {
+                            let cx = wetSandCells[i], cy = wetSandCells[i + 1];
+                            if (connectedToWater[cx * height + cy] === 0) {
                                 if (Math.random() < 0.05) {  // 5% chance per check (roughly 0.5% per frame overall)
-                                    grid[p.x][p.y] -= 9; // Turn back into dry sand!
+                                    grid[cx][cy] -= 9; // Turn back into dry sand!
                                 }
                             }
                         }
