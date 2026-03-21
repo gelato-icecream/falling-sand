@@ -867,7 +867,10 @@
             "methane": btnMethane, "gas": btnMethane, "uranium": btnUranium, "nuclear": btnUranium, "nuke": btnUranium,
             "steam": btnSteam, "vapor": btnSteam, "erase": btnErase, "eraser": btnErase, "air": btnErase, "clear": btnClear,
             "reset": btnReset, "pause": btnPause, "stop": btnPause, "antimatter": "am", "void": "am", "virus": "vi",
-            "sludge": "vi", "rainbow": "rb", "party": "rb", "boom": "kb", "kaboom": "kb", "help": "help", "list": "help"
+            "sludge": "vi", "rainbow": "rb", "party": "rb", "boom": "kb", "kaboom": "kb", "help": "help", "list": "help",
+            "god": "god", "gm": "god", "godmode": "god", "flood": "fd", "fd": "fd", "volcano": "vc", "vc": "vc",
+            "quicksand": "qs", "qs": "qs", "supernova": "sn", "nova": "sn", "sn": "sn", "iceage": "ice", "ice": "ice",
+            "freezeall": "ice", "invert virus": "iv", "iv": "iv", "invert antimatter": "ia", "ia": "ia", "is": "is"
         };
 
         let terminalState = "LOCKED"; // LOCKED, PASSWORD, UNLOCKED
@@ -1142,6 +1145,14 @@
             isUraniumInverted = false; btnInvertUranium.classList.remove('active');
             isMethaneInverted = false; btnInvertMethane.classList.remove('active');
             isSteamInverted = false; btnInvertSteam.classList.remove('active');
+
+            // Reset secrets
+            isAntimatterUnlocked = false;
+            isVirusUnlocked = false;
+            isRainbowMode = false;
+            isAntimatterInverted = false;
+            isVirusInverted = false;
+            showCheatMessage("♻️ SYSTEM FACTORY RESET ♻️");
         });
 
         // Fire temperature label updater
@@ -1434,6 +1445,22 @@
             // Skip shortcuts if focusing any input
             if (e.target.tagName.toLowerCase() === 'input' || secretTerminal.style.transform.includes('translateY(0)')) return;
 
+            // Key Buffer for typing cheats directly
+            if (e.key.length === 1 && !e.ctrlKey && !e.altKey) {
+                cheatBuffer += e.key.toLowerCase();
+                if (cheatBuffer.length > 20) cheatBuffer = cheatBuffer.substring(1);
+                
+                // Fast check buffer for cheats
+                const codes = ["godmode", "god", "gm", "flood", "fd", "quicksand", "qs", "volcano", "vc", "antimatter", "am", "void", "virus", "vi", "infect", "rainbow", "rb", "supernova", "sn", "nova", "iceage", "ice", "kaboom", "boom", "kb"];
+                for (const c of codes) {
+                    if (cheatBuffer.endsWith(c)) {
+                        processCheat(c);
+                        cheatBuffer = "";
+                        break;
+                    }
+                }
+            }
+
             switch (e.key.toLowerCase()) {
                 case '1': btnSand.click(); break;
                 case '2': btnStone.click(); break;
@@ -1444,12 +1471,16 @@
                 case 'a': btnAcidPowder.click(); break;
                 case '7': btnLava.click(); break;
                 case '8': btnObsidian.click(); break;
+                case 't': btnThermite.click(); break;
+                case 'j': btnMoltenMetal.click(); break;
                 case 'w': btnWood.click(); break;
                 case 'l': btnLightning.click(); break;
                 case 'g': btnGlass.click(); break;
                 case 'e': btnIce.click(); break;
                 case 'n': btnNitrogen.click(); break;
-                case 'k': btnGunpowder.click(); break;
+                case 'k': 
+                    if (!e.ctrlKey && !e.altKey && !e.shiftKey) btnGunpowder.click(); 
+                    break;
                 case 'm': btnMeltedSand.click(); break;
                 case 's': btnGlassShards.click(); break;
                 case 'x': btnFire.click(); break;
@@ -1464,15 +1495,19 @@
                     if (e.shiftKey) { btnClearActive.click(); }
                     else { btnClear.click(); }
                     break;
-                case 'i': btnInvertAll.click(); break;
-                case 'r': btnReset.click(); break;
+                case 'i': 
+                     if (!e.ctrlKey && !e.altKey && !e.shiftKey) btnInvertAll.click(); 
+                     break;
+                case 'r': 
+                     if (!e.ctrlKey && !e.altKey && !e.shiftKey) btnReset.click(); 
+                     break;
                 case 'f': btnFullscreen.click(); break;
                 case 'h': btnToggleUi.click(); break;
             }
 
             // --- SECRET TERMINAL ACTIVATOR ---
-            // Even harder combo: Ctrl + Alt + Shift + Backspace
-            if (e.ctrlKey && e.altKey && e.shiftKey && e.key === 'Backspace') {
+            // Combo: Ctrl + Alt + Shift + K (Standardized)
+            if (e.ctrlKey && e.altKey && e.shiftKey && (e.key === 'K' || e.key === 'k')) {
                 showTerminal();
                 e.preventDefault();
             }
